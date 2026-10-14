@@ -1,0 +1,33 @@
+{
+  "name": "campus-buddy",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "database",
+    "backend"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "postinstall": "npm run build:libs",
+    "build:libs": "npm run build -w @scc/shared && npm run build -w @scc/db",
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev -w @scc/backend",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "test": "npm test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.19.0",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.2"
+  }
+}
