@@ -1,14 +1,14 @@
 # Frontend.md — Smart Campus Companion
 ### Role file for the Frontend owner (M2) and their AI agent
 
-> **Read `AGENTS.md` first** (contract, ownership, workflow), then `docs/agents/UI-UX.md` (how everything looks and moves). This file tells you *how to build the React application logic*.
-> You own `apps/web/**` **except** `apps/web/src/three/**`, `apps/web/src/layouts/**`, `apps/web/public/3d/**` (UI/UX owner). You consume `@scc/shared` (contract) and `@scc/ui` (components). You never import `@scc/db` or any Node-only module.
+> **Read `docs/AGENTS.md` first** (contract, ownership, workflow), then `docs/agents/UI-UX.md` (how everything looks and moves). This file tells you *how to build the React application logic*.
+> You own `frontend/**` **except** `frontend/src/three/**`, `frontend/src/layouts/**`, `frontend/public/3d/**` (UI/UX owner). You consume `@scc/shared` (contract) and `@scc/ui` (components). You never import `@scc/db` or any Node-only module.
 
 ---
 
 ## 0. Agent operating instructions
 
-1. Read `AGENTS.md` → `UI-UX.md` §6, §9, §16 → this file → `packages/shared/src/**`.
+1. Read `AGENTS.md` → `UI-UX.md` §6, §9, §16 → this file → `shared/src/**`.
 2. Plan mode first: one feature or page group per task (e.g., "login + MFA verify pages"). List files, hooks, tests. Wait for approval.
 3. **Build order:** §2 app shell → §3 API client → §4 auth provider + guards → §5 routing → §6 data hooks → pages by phase (`AGENTS.md` §11) → §11 tests.
 4. **Mock-first:** build every page against MSW mocks (§11.2) so you never wait for the backend. Turn mocks off per endpoint as the real API lands.
@@ -37,7 +37,7 @@ Dev: `vite`, `@vitejs/plugin-react`, `typescript`, `vitest`, `@testing-library/r
 ## 2. App structure
 
 ```
-apps/web/
+frontend/
   index.html  vite.config.ts  tsconfig.json  vitest.config.ts  playwright.config.ts
   lighthouse-budget.json  .lighthouserc.json
   src/
@@ -69,7 +69,7 @@ Rule: **pages are thin** (layout + feature components); **features hold logic**;
 
 ### 2.1 Vite config essentials
 ```ts
-// apps/web/vite.config.ts
+// frontend/vite.config.ts
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
@@ -386,7 +386,7 @@ Call `useNova.getState().setMood(...)` per `UI-UX.md` §7.2 / §16.1: login succ
 - Scenario switches via query string or a dev panel: `?mock=locked`, `?mock=mfa`, `?mock=step-up`, `?mock=empty`, `?mock=slow`, `?mock=500` — so UI/UX and you can design and test every state.
 - The same handlers power unit tests (`msw/node`) and dev mode (`msw/browser`, enabled with `VITE_USE_MOCKS=true`). Mocks are **never** included in production builds (dynamic import behind the env flag).
 
-### 11.3 End-to-end (Playwright, `apps/web/e2e/`)
+### 11.3 End-to-end (Playwright, `frontend/e2e/`)
 Run against the full local stack (`docker compose` + seeded DB). Specs:
 1. Register → read verification email via the **Mailpit API** → verify → login.
 2. Faculty login with MFA (TOTP generated in the test from the seeded test secret) → publish announcement → student sees it.

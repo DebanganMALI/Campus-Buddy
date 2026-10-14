@@ -1,14 +1,16 @@
 # Database.md — Smart Campus Companion
 ### Role file for the Database owner (M3) and their AI agent
 
-> **Read `AGENTS.md` first.** It defines the contract, ownership and workflow. This file tells you *how to build the data layer*.
-> You own **`packages/db/**`** (`@scc/db`). You do not edit `apps/**` or other packages — propose changes via issues.
+> **Note:** M1 created the first models (`user`, `session`, `auth-token`, `audit-log`) on Day 0 so auth could start. They follow this file; you own them from now on.
+>
+> **Read `docs/AGENTS.md` first.** It defines the contract, ownership and workflow. This file tells you *how to build the data layer*.
+> You own **`database/**`** (`@scc/db`). You do not edit `backend/**`, `frontend/**` or other folders — propose changes via issues.
 
 ---
 
 ## 0. Agent operating instructions
 
-1. Read `AGENTS.md` → this file → `packages/shared/src/schemas/*` (field names and enums must match exactly).
+1. Read `AGENTS.md` → this file → `shared/src/schemas/*` (field names and enums must match exactly).
 2. Plan mode first: list the files you will create and the indexes you will add; wait for approval.
 3. Build in this order: **connection + base plugins → models (§4) → indexes → query helpers (§6) → migrations (§7) → seed (§8) → tests (§10)**.
 4. Every model change ships with: updated index list, a migration if existing data is affected, tests, and an update to this file's tables.
@@ -17,7 +19,7 @@
 ### 0.1 What you deliver to the others
 | Consumer | What `@scc/db` exports |
 |---|---|
-| Backend (`apps/api`, `apps/worker`) | `connectDb()`, `disconnectDb()`, all models, `toDTO` mappers, `paginate()`, `audienceFilter()`, `visibleContentFilter()`, `searchAll()`, `feedForUser()`, `withTransaction()`, field crypto helpers, `syncIndexes()` |
+| Backend (`backend`, `backend/src/worker`) | `connectDb()`, `disconnectDb()`, all models, `toDTO` mappers, `paginate()`, `audienceFilter()`, `visibleContentFilter()`, `searchAll()`, `feedForUser()`, `withTransaction()`, field crypto helpers, `syncIndexes()` |
 | Frontend | Nothing (web never imports `@scc/db`) |
 | Everyone | Seed data for local dev and the demo; load-test data generator |
 
@@ -36,7 +38,7 @@
 | Deletes | **Soft delete** (`deletedAt`) for user-generated content and users; hard delete only by retention jobs |
 | Tenant readiness | Do **not** add `tenantId` now; keep all queries going through helpers so adding it later is one change |
 
-### 1.1 Connection settings (`packages/db/src/connect.ts`)
+### 1.1 Connection settings (`database/src/connect.ts`)
 ```ts
 await mongoose.connect(env.MONGO_URI, {
   maxPoolSize: 50,              // per API instance; tune with load test
@@ -83,7 +85,7 @@ Planning assumptions for **1 lakh registered users** (re-check after the load te
 - **Enums come from `@scc/shared`** (`ROLES`, `DEPARTMENTS`, `YEARS`, statuses). Never duplicate the arrays.
 - **Strings:** `trim: true`; max lengths match the shared Zod schemas.
 - **Arrays:** cap sizes with validators (e.g., audience departments ≤ 30).
-- `toDTO(doc, viewer)` mappers live in `packages/db/src/mappers/` and add viewer-specific fields (`bookmarked`, `myRsvp`, `myTracking`) only when the caller passes them.
+- `toDTO(doc, viewer)` mappers live in `database/src/mappers/` and add viewer-specific fields (`bookmarked`, `myRsvp`, `myTracking`) only when the caller passes them.
 
 ---
 
@@ -277,13 +279,13 @@ Every query used by the API must appear here with its index. Backend adds new ro
 
 ---
 
-## 6. Query helpers (`packages/db/src/queries/`)
+## 6. Query helpers (`database/src/queries/`)
 
 The backend uses these instead of hand-writing complex queries.
 
 ### 6.1 Audience keys
 ```ts
-// packages/db/src/queries/audience.ts
+// database/src/queries/audience.ts
 import type { Audience } from "@scc/shared";
 
 /** Flattens an audience into index-friendly keys ("DEPT:YEAR"), including ALL wildcards. */
@@ -342,7 +344,7 @@ export async function paginate<T>(model: Model<T>, filter: object, opts: {
 - `text` mode: `$text: { $search: q }` + visibility filter, sort by `textScore`.
 - Escape/limit input: `q` 2–100 chars (shared schema).
 
-Atlas Search index definitions live in `packages/db/search-indexes/*.json` and are applied by `npm run db:sync-search` (Atlas Admin API or Atlas CLI). Example:
+Atlas Search index definitions live in `database/search-indexes/*.json` and are applied by `npm run db:sync-search` (Atlas Admin API or Atlas CLI). Example:
 ```json
 { "name": "announcements_search", "mappings": { "dynamic": false, "fields": {
   "title": [{ "type": "string", "analyzer": "lucene.standard" }, { "type": "autocomplete" }],
@@ -363,8 +365,8 @@ Atlas Search index definitions live in `packages/db/search-indexes/*.json` and a
 
 ## 7. Migrations
 
-- Location: `packages/db/migrations/NNNN-description.ts`, each exporting `up(db)` and `down(db)`.
-- Runner: `packages/db/src/migrate.ts` (no extra dependency): acquires a lock document (`migrationLock`, `findOneAndUpdate` with `lockedUntil`), applies pending migrations in order, records `{ name, appliedAt, checksum }` in `migrations`.
+- Location: `database/migrations/NNNN-description.ts`, each exporting `up(db)` and `down(db)`.
+- Runner: `database/src/migrate.ts` (no extra dependency): acquires a lock document (`migrationLock`, `findOneAndUpdate` with `lockedUntil`), applies pending migrations in order, records `{ name, appliedAt, checksum }` in `migrations`.
 - Commands: `npm run db:migrate`, `npm run db:migrate:down -- --to 0003`, `npm run db:migrate:status`.
 - `npm run db:sync-indexes` calls `Model.syncIndexes()` for every model (creates missing, **drops indexes not in the schema** — review the diff output before running in production; run with `--dry-run` first).
 - Rules: migrations are **idempotent**, work on batches of ≤ 1 000 docs, never load a whole collection into memory, and are tested up → down → up on seed data.
@@ -385,7 +387,7 @@ Atlas Search index definitions live in `packages/db/search-indexes/*.json` and a
 ### 8.2 Load-test data (`npm run db:seed:load -- --users 100000`)
 - Generates 1 lakh users (one precomputed Argon2id hash reused for all — compute once with the real parameters), realistic dept/year distribution, 10 000 announcements, 2 000 events, 50 000 resources, 3 000 openings, 1 000 000 bookmarks.
 - `insertMany` in batches of 1 000 with `ordered: false`; build indexes **after** bulk load for speed, then verify with explain tests.
-- Writes `infra/k6/data/users.csv` (email list for k6) — git-ignored.
+- Writes `backend/infra/k6/data/users.csv` (email list for k6) — git-ignored.
 
 ---
 
@@ -400,7 +402,7 @@ Atlas Search index definitions live in `packages/db/search-indexes/*.json` and a
 | Encryption at rest | Atlas default (storage encryption). Backups encrypted. |
 | PII minimisation (DPDP Act) | Store only what features need. No date of birth, no addresses, no Aadhaar/IDs — **ever**. |
 | Retention | TTL: sessions (expiry), authTokens (expiry), notifications (90 d), auditLogs (365 d). Worker jobs: delete `rejected`/`infected` resources + objects after 30 d; **anonymise** users soft-deleted ≥ 30 d (name → "Former user", email → `deleted+<id>@invalid`, clear rollNo/profile/providers, keep content attribution as "Former user"). |
-| Backups | Production: Atlas cloud backups (continuous/snapshot per tier), 7-day point-in-time minimum. Without a backup tier: nightly `mongodump --gzip` by a scheduled job to a **private, encrypted** bucket, 7 daily + 4 weekly copies. **Restore drill** documented in `packages/db/RESTORE.md` and practised once before 20 Nov. |
+| Backups | Production: Atlas cloud backups (continuous/snapshot per tier), 7-day point-in-time minimum. Without a backup tier: nightly `mongodump --gzip` by a scheduled job to a **private, encrypted** bucket, 7 daily + 4 weekly copies. **Restore drill** documented in `database/RESTORE.md` and practised once before 20 Nov. |
 | Audit | Admin and auth actions are written to `auditLogs` by Backend; your job is to make the collection append-only and indexed. |
 
 ---
@@ -420,13 +422,13 @@ Test DB: `mongodb-memory-server` **replica set** mode by default; if `MONGO_TEST
 | `migrations/*.test.ts` | up → down → up leaves the same state |
 | `seed/seed.test.ts` | Seed is idempotent and refuses production |
 
-Coverage target for `packages/db`: **≥ 85% lines**.
+Coverage target for `database`: **≥ 85% lines**.
 
 ---
 
 ## 11. Package layout
 ```
-packages/db/
+database/
   package.json  tsconfig.json  RESTORE.md  CHANGELOG.md
   src/
     index.ts
@@ -445,7 +447,7 @@ packages/db/
 
 ### 11.1 Example model (reference quality bar)
 ```ts
-// packages/db/src/models/announcement.ts
+// database/src/models/announcement.ts
 import { Schema, model, type InferSchemaType } from "mongoose";
 import { DEPARTMENTS, YEARS, LIMITS } from "@scc/shared";
 import { basePlugin } from "../plugins/base.js";

@@ -23,11 +23,11 @@ Payments, attendance, exams/grades, chat/DMs, push notifications to phones, AI/L
 
 | Member | Role file | Owns (may edit) | Also responsible for |
 |---|---|---|---|
-| **M1 — Backend (Coordinator)** | `Backend.md` | `apps/api/**`, `apps/worker/**`, `infra/**`, `.github/**`, root config files | Integration, CI/CD, deployment, merging `dev → main` |
-| **M2 — Frontend** | `Frontend.md` | `apps/web/**` **except** the UI/UX folders below | API client, routing, state, page logic, e2e tests |
-| **M3 — Database** | `Database.md` | `packages/db/**` | Models, indexes, migrations, seed data, query helpers, backups plan |
-| **M4 — UI/UX** | `UI-UX.md` | `packages/ui/**`, `design/**`, `apps/web/src/three/**`, `apps/web/src/layouts/**`, `apps/web/public/3d/**` | Figma, design tokens, components, 3D mascot, accessibility |
-| **Everyone (shared)** | — | `packages/shared/**`, `AGENTS.md`, `docs/api/**` | Changes need approval from **all four** (§9.4) |
+| **M1 — Backend (Coordinator)** | `Backend.md` | `backend/**`, `.github/**`, root config files | Integration, CI/CD, deployment, merging `dev → main` |
+| **M2 — Frontend** | `Frontend.md` | `frontend/**` **except** the UI/UX folders below | API client, routing, state, page logic, e2e tests |
+| **M3 — Database** | `Database.md` | `database/**` | Models, indexes, migrations, seed data, query helpers, backups plan |
+| **M4 — UI/UX** | `UI-UX.md` | `ui/**`, `ui/design/**`, `frontend/src/three/**`, `frontend/src/layouts/**`, `frontend/public/3d/**` | Figma, design tokens, components, 3D mascot, accessibility |
+| **Everyone (shared)** | — | `shared/**`, `AGENTS.md`, `docs/api/**` | Changes need approval from **all four** (§9.4) |
 
 **Rule of ownership:** an agent edits **only** files in its owner's folders. If you need a change elsewhere, open a GitHub issue (template "Change request") assigned to the owner, or propose it in your PR description — never edit it yourself.
 
@@ -37,13 +37,7 @@ Replace `@m1-github … @m4-github` in `.github/CODEOWNERS` with real usernames 
 
 ## 3. Tooling setup per AI tool
 
-All tools must load this file. Create these pointer files on Day 0 (M1):
-
-| Tool | File to create | Content |
-|---|---|---|
-| Claude Code | `CLAUDE.md` (repo root) | `@AGENTS.md` on line 1, then the line `Also read your role file in docs/agents/.` |
-| Cursor | `.cursor/rules/agents.mdc` | Front-matter `alwaysApply: true`, body: "Follow AGENTS.md at the repo root and your role file in docs/agents/." |
-| Antigravity / others | Use the tool's project rules feature (check its current docs for the file location); paste the same one-line instruction | — |
+This file lives at `docs/AGENTS.md` to keep the repo root clean, so tools won't find it automatically. Start every agent session by attaching it (in Antigravity, @-mention `docs/AGENTS.md` and your role file).
 
 Each person starts every agent session with: *"Read AGENTS.md and docs/agents/<MyRole>.md, then make a plan for: <task>."* Use **plan mode**, review the plan, then approve.
 
@@ -52,50 +46,41 @@ Each person starts every agent session with: *"Read AGENTS.md and docs/agents/<M
 ## 4. Repository layout
 
 ```
-smart-campus-companion/
-├── AGENTS.md  CLAUDE.md  README.md  .env.example  .gitignore  .editorconfig
-├── package.json            # npm workspaces root, shared scripts
-├── tsconfig.base.json      # strict TS settings all packages extend
-├── eslint.config.js  .prettierrc
-├── docker-compose.yml      # local MongoDB (replica set), Redis, MinIO, Mailpit, ClamAV
-├── apps/
-│   ├── api/                # Express 5 REST API                       (M1)
-│   ├── worker/             # BullMQ background jobs                   (M1)
-│   └── web/                # React 19 + Vite SPA                      (M2, parts M4)
-├── packages/
-│   ├── shared/  @scc/shared  # Zod schemas, DTO types, roles, permissions, error codes (ALL)
-│   ├── db/      @scc/db      # Mongoose models, indexes, migrations, seed, query helpers (M3)
-│   └── ui/      @scc/ui      # Design tokens + React component library  (M4)
-├── design/                 # Figma exports, 3D build scripts          (M4)
-├── infra/                  # Dockerfiles, nginx, k6 load tests, deploy configs (M1)
-├── docs/
-│   ├── agents/             # Backend.md, Frontend.md, Database.md, UI-UX.md
-│   ├── api/openapi.yaml    # generated from @scc/shared schemas (§5.6)
-│   ├── adr/                # architecture decision records (0001-…)
-│   └── lab/                # SRS, UML, test plan, defect log, report
-└── .github/                # CI workflows, CODEOWNERS, PR + issue templates (M1)
+Campus-Buddy/
+├── backend/   @scc/backend # Express 5 API (src/), worker (src/worker/), docker-compose.yml, .env.example (M1)
+├── database/  @scc/db      # Mongoose models, indexes, migrations, seed, query helpers (M3)
+├── frontend/  @scc/frontend# React 19 + Vite SPA                      (M2, parts M4)
+├── shared/    @scc/shared  # Zod schemas, DTO types, roles, permissions, error codes (ALL)
+├── ui/        @scc/ui      # Design tokens, components, design/ (Figma exports, 3D scripts) (M4)
+├── docs/                   # AGENTS.md, agents/ (role guides), api/, adr/, lab/
+├── .github/                # CI workflows, CODEOWNERS, PR template (M1)
+├── .editorconfig  .gitattributes  .gitignore
+├── eslint.config.js  package.json  tsconfig.base.json
+└── README.md
 ```
+**Keep the root minimal.** Anything that belongs to one member goes inside their folder (their own `.env.example`, Docker files, configs). Root files are only the ones every package shares.
+Each member adds their folder to the root `workspaces` list when they create it.
 
 ### 4.1 Dependency direction (never break this)
 ```
-apps/web ──► packages/ui ──► (nothing internal)
-apps/web ──► packages/shared
-apps/api ──► packages/shared, packages/db
-apps/worker ──► packages/shared, packages/db
-packages/db ──► packages/shared
-packages/shared ──► (nothing internal; only zod)
+frontend ──► ui ──► (nothing internal)
+frontend ──► shared
+backend ──► shared, database
+backend/src/worker ──► shared, database
+database ──► shared
+shared ──► (nothing internal; only zod)
 ```
-`apps/web` must **never** import `packages/db`, `apps/api`, `mongoose`, or any Node-only module.
+`frontend` must **never** import `database`, `backend`, `mongoose`, or any Node-only module.
 
 ---
 
 ## 5. The contract (the most important section)
 
-The contract lives in **`packages/shared`**. It is the single source of truth for request bodies, response shapes, roles, permissions and error codes. Backend validates with these schemas; Frontend types its client and forms with them; Database aligns model fields with them; UI/UX labels roles and states with them.
+The contract lives in **`shared`**. It is the single source of truth for request bodies, response shapes, roles, permissions and error codes. Backend validates with these schemas; Frontend types its client and forms with them; Database aligns model fields with them; UI/UX labels roles and states with them.
 
-### 5.1 `packages/shared` layout
+### 5.1 `shared` layout
 ```
-packages/shared/src/
+shared/src/
   index.ts
   constants.ts        # DEPARTMENTS, YEARS, SEMESTERS, limits (file size, page size), cookie/header names
   roles.ts            # ROLES, PRIVILEGED_ROLES
@@ -157,7 +142,7 @@ Every non-2xx response:
 
 ### 5.5 Roles and permissions
 ```ts
-// packages/shared/src/roles.ts
+// shared/src/roles.ts
 export const ROLES = ["student", "faculty", "moderator", "placement_officer", "admin"] as const;
 export type Role = (typeof ROLES)[number];
 export const PRIVILEGED_ROLES: Role[] = ["faculty", "moderator", "placement_officer", "admin"]; // MFA mandatory
@@ -185,7 +170,7 @@ Permission strings follow `resource:action[:scope]`.
 ### 5.6 OpenAPI
 `docs/api/openapi.yaml` is **generated** from the Zod schemas (script `npm run openapi -w @scc/shared`, using `zod-openapi` or Zod 4's JSON Schema export). Never hand-edit it. Frontend uses it with MSW mocks; reviewers use it to check contract changes.
 
-### 5.7 Core DTOs (summary — full schemas in `packages/shared`)
+### 5.7 Core DTOs (summary — full schemas in `shared`)
 ```ts
 UserDTO        { id, name, email, rollNo?, role, department, year?, section?, status, emailVerified,
                  mfaEnabled, avatarUrl?, createdAt }
@@ -295,25 +280,26 @@ Tokens are **never** readable by JavaScript and **never** stored in `localStorag
 
 | Topic | Rule |
 |---|---|
-| Runtime | **Node.js 22 LTS** everywhere (`.nvmrc`, `engines` field) |
+| Runtime | **Node.js 22+** everywhere (`engines` field; CI uses Node 22) |
 | Language | **TypeScript**, `strict: true`, `noUncheckedIndexedAccess: true`, ESM (`"type": "module"`), no `any` (use `unknown` + narrowing) |
 | Package manager | **npm workspaces** only. Commit `package-lock.json`. No yarn/pnpm. |
 | Key versions | React 19 · Vite (current) · Express 5 · Mongoose 9 · Zod 4 · BullMQ 6 · ioredis · Vitest 5 · Playwright. The lockfile is the truth; upgrade majors only through an ADR. |
-| Style | ESLint (flat config) + Prettier; `npm run lint` must pass with zero warnings |
+| Style | ESLint (flat config) + `.editorconfig` (2 spaces, LF); `npm run lint` must pass with zero warnings |
 | Naming | files `kebab-case.ts`, React components `PascalCase.tsx`, variables/functions `camelCase`, constants `UPPER_SNAKE_CASE`, Mongo collections plural lowercase (`announcements`) |
 | Async | `async/await` only; no unhandled promises (`@typescript-eslint/no-floating-promises`) |
-| Errors | Throw `AppError(code, message?)` from `apps/api/src/lib/errors.ts`; never `res.status(500).send(err)` |
+| Errors | Throw `AppError(code, message?)` from `backend/src/lib/errors.ts`; never `res.status(500).send(err)` |
 | Comments | Explain *why*, not *what*. Every security-relevant decision gets a one-line comment |
 | Functions | Small, pure where possible; controllers thin, logic in services |
 | Tests | **Vitest** (Jest-compatible API) + Supertest for API; Testing Library + MSW for web; Playwright for e2e. Every new route or component ships with tests |
-| Env vars | Declared in `.env.example` with a comment; validated at startup with Zod (`apps/api/src/config/env.ts`) |
+| Env vars | Declared in `backend/.env.example` with a comment; validated at startup with Zod (`backend/src/config/env.ts`) |
 
 ### 8.1 Root scripts (must keep working)
 ```
 npm install            # installs all workspaces, builds @scc/shared
-npm run dev            # docker compose up + api + worker + web together
+npm run infra:up       # local MongoDB, Redis, Mailpit (backend/docker-compose.yml)
+npm run dev            # backend API with hot reload
 npm run build          # builds all packages and apps
-npm run lint           # eslint + prettier check
+npm run lint           # eslint
 npm run typecheck      # tsc --noEmit across workspaces
 npm test               # all unit/integration tests
 npm run test:e2e       # Playwright against local stack
@@ -322,7 +308,7 @@ npm run db:seed        # demo data (never runs in production)
 npm run openapi        # regenerate docs/api/openapi.yaml
 ```
 
-### 8.2 Environment variables (`.env.example` is the source; M1 maintains it)
+### 8.2 Environment variables (`backend/.env.example` is the source; M1 maintains it)
 ```
 NODE_ENV=development
 PORT=4000
@@ -364,11 +350,11 @@ LOG_LEVEL=info
 - `main` — always deployable, **protected** (PR + 1 approval + green CI, no direct pushes, no force pushes).
 - `dev` — integration branch, protected the same way. Feature PRs target `dev`. M1 merges `dev → main` at each milestone.
 - `feature/<area>-<short-task>` — e.g. `feature/backend-auth-login`, `feature/db-announcement-model`, `feature/web-login-page`, `feature/ui-button`.
-- `fix/<area>-<short-task>` for bug fixes; `contract/<change>` for `packages/shared` changes.
+- `fix/<area>-<short-task>` for bug fixes; `contract/<change>` for `shared` changes.
 
 ### 9.2 Commits — Conventional Commits
 `feat(api): add refresh token rotation` · `fix(web): keep focus on OTP error` · `test(db): index coverage for feed query` · `docs(agents): clarify upload flow` · `chore(ci): add trivy scan`.
-Small commits, one logical change each. AI-generated commits keep any co-author line the tool adds.
+Small commits, one logical change each. **Each member is the sole author of their commits**: no AI co-author lines, no bot commits (no Dependabot PRs).
 
 ### 9.3 Pull requests
 - One feature per PR, **≤ ~400 changed lines** where possible.
@@ -376,11 +362,11 @@ Small commits, one logical change each. AI-generated commits keep any co-author 
 - Reviewer: at least **one other member**; CODEOWNERS adds the owner automatically.
 - Sync often: `git pull --rebase origin dev` before pushing. Resolve conflicts only in files you own; otherwise ask the owner.
 
-### 9.4 Changing the contract (`packages/shared`, `AGENTS.md`, error codes, endpoint shapes)
+### 9.4 Changing the contract (`shared`, `AGENTS.md`, error codes, endpoint shapes)
 1. Open a `contract/<change>` branch with **only** the contract change + regenerated OpenAPI.
 2. Describe the change and who is affected in the PR.
 3. **All four members approve.** Then merge first, before any feature code that depends on it.
-4. Bump `@scc/shared` version (minor for additions, major for breaking changes) and note it in `packages/shared/CHANGELOG.md`.
+4. Bump `@scc/shared` version (minor for additions, major for breaking changes) and note it in `shared/CHANGELOG.md`.
 
 ---
 
@@ -388,7 +374,7 @@ Small commits, one logical change each. AI-generated commits keep any co-author 
 
 | Need | How to proceed without waiting |
 |---|---|
-| Frontend needs an endpoint that isn't built | Use **MSW mock handlers** generated from `@scc/shared` schemas (`apps/web/src/mocks/`). Switch off mocks per route when the API lands. |
+| Frontend needs an endpoint that isn't built | Use **MSW mock handlers** generated from `@scc/shared` schemas (`frontend/src/mocks/`). Switch off mocks per route when the API lands. |
 | Backend needs a model that isn't merged | Write the service against the `@scc/db` model interface agreed in `Database.md`; use the in-memory test DB. |
 | Database needs to know query patterns | Use the query patterns table in `Database.md` §5; Backend adds new patterns there via PR. |
 | UI/UX components not ready | Frontend uses plain semantic HTML with tokens, swaps in `@scc/ui` components later — **no custom styling systems**. |

@@ -2,7 +2,7 @@
 ### Design system, 3D character system, Figma workflow and implementation brief
 
 > **Who this file is for:** an AI coding/design agent (Claude Code, Antigravity, Cursor, etc.) plus the teammate who owns UI/UX.
-> **What it produces:** (1) a Figma file with foundations, components, 3D renders and every screen; (2) the 3D character assets; (3) the `packages/ui` component library and the visual layer of `apps/web`, implemented exactly as designed.
+> **What it produces:** (1) a Figma file with foundations, components, 3D renders and every screen; (2) the 3D character assets; (3) the `ui` component library and the visual layer of `frontend`, implemented exactly as designed.
 > **Read first:** `AGENTS.md` (shared rules, repo layout, API contract). If anything here conflicts with `AGENTS.md`, `AGENTS.md` wins for code rules; this file wins for visual and interaction decisions.
 
 ---
@@ -16,18 +16,18 @@ You are the **UI/UX and 3D design agent**. You own:
 |---|---|
 | Design tokens, typography, grid, motion rules | API calls, auth logic, data fetching (Frontend agent) |
 | Figma file: foundations, components, screens, prototype | Server code, DB schemas (Backend / Database agents) |
-| 3D character + scene assets, fallbacks, 3D runtime | Business rules, permissions (they come from `packages/shared`) |
-| `packages/ui` (presentational React components) | Page wiring inside `apps/web/src/pages/**` beyond layout shells |
+| 3D character + scene assets, fallbacks, 3D runtime | Business rules, permissions (they come from `shared`) |
+| `ui` (presentational React components) | Page wiring inside `frontend/src/pages/**` beyond layout shells |
 | Accessibility, responsive behaviour, microcopy | Deployment |
 
 ### 0.2 Order of work (do not skip or reorder)
-1. **Read** this file end to end, then `AGENTS.md`, then `packages/shared/src/permissions.ts` (roles) and the API error codes in §16.
+1. **Read** this file end to end, then `AGENTS.md`, then `shared/src/permissions.ts` (roles) and the API error codes in §16.
 2. **Plan mode first.** Write a short plan (files you will touch, assets you will create) and wait for human approval.
 3. **Foundations in Figma** (§8.2 pages 1–2): variables, type styles, grid, effects.
 4. **3D character** (§7): build the procedural model, render stills, export fallbacks. Put stills in Figma page "3D".
-5. **Components in Figma** (§6), then **the same components in code** (`packages/ui`). Figma and code must use identical token names.
+5. **Components in Figma** (§6), then **the same components in code** (`ui`). Figma and code must use identical token names.
 6. **Screens in Figma** (§9), desktop + mobile, then a clickable prototype of the auth flow.
-7. **Implement screens' visual layer** in `apps/web` using only `packages/ui` components and tokens.
+7. **Implement screens' visual layer** in `frontend` using only `ui` components and tokens.
 8. **Verify** with the checklists in §12 (a11y), §13 (performance) and §17 (Definition of Done). Attach screenshots to the PR.
 
 ### 0.3 Hard rules
@@ -178,7 +178,7 @@ Rules: headings weight 400–500 (never bold 700 for display), body never below 
 --dur-4: 800ms  /* hero, image zoom */
 ```
 
-### 3.4 Tailwind v4 implementation (`packages/ui/src/styles/tokens.css`)
+### 3.4 Tailwind v4 implementation (`ui/src/styles/tokens.css`)
 ```css
 @import "tailwindcss";
 @import "@fontsource-variable/geist";
@@ -274,9 +274,9 @@ A fixed, non-interactive overlay draws 1px vertical lines in `--color-line` at *
 
 ---
 
-## 6. Component library (`packages/ui`)
+## 6. Component library (`ui`)
 
-Every component: TypeScript props, forwards `ref`, accepts `className`, uses tokens only, has a Figma counterpart with the **same name and variant names**, and has a story/preview page (`apps/web/src/dev/ui-gallery.tsx`, dev-only route).
+Every component: TypeScript props, forwards `ref`, accepts `className`, uses tokens only, has a Figma counterpart with the **same name and variant names**, and has a story/preview page (`frontend/src/dev/ui-gallery.tsx`, dev-only route).
 
 ### 6.1 Inventory
 
@@ -312,7 +312,7 @@ Every component: TypeScript props, forwards `ref`, accepts `className`, uses tok
 
 ### 6.2 Button reference implementation
 ```tsx
-// packages/ui/src/components/Button.tsx
+// ui/src/components/Button.tsx
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "../lib/cn";
 
@@ -354,7 +354,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 });
 ```
 ```css
-/* packages/ui/src/styles/signature.css */
+/* ui/src/styles/signature.css */
 .chamfer   { clip-path: polygon(var(--chamfer) 0,100% 0,100% calc(100% - var(--chamfer)),calc(100% - var(--chamfer)) 100%,0 100%,0 var(--chamfer)); }
 .chamfer-s { clip-path: polygon(var(--chamfer-s) 0,100% 0,100% calc(100% - var(--chamfer-s)),calc(100% - var(--chamfer-s)) 100%,0 100%,0 var(--chamfer-s)); }
 .aurora-border { background: linear-gradient(var(--color-bg),var(--color-bg)) padding-box, var(--aurora) border-box;
@@ -420,11 +420,11 @@ Empty states use **pre-rendered WebP stills**, not live 3D.
 - Ear fins: `ConeGeometry` with 4 radial segments, rounded via bevel-like scaling.
 - Use `@react-three/drei` `RoundedBox` / `Capsule` where helpful.
 
-**Route B — Blender → GLB** (if the team wants a sculpted look). The agent writes a **Blender Python script** (`design/3d/nova_build.py`) that models Nova with the proportions above so the model is reproducible, then exports `nova.glb`. Post-process with `@gltf-transform/cli`:
+**Route B — Blender → GLB** (if the team wants a sculpted look). The agent writes a **Blender Python script** (`ui/design/3d/nova_build.py`) that models Nova with the proportions above so the model is reproducible, then exports `nova.glb`. Post-process with `@gltf-transform/cli`:
 ```
 npx @gltf-transform/cli optimize nova.glb nova.opt.glb --compress meshopt --texture-compress webp
 ```
-Budget: `nova.opt.glb` ≤ **400 KB**. Serve from `apps/web/public/3d/` (same origin, long cache, hashed filename).
+Budget: `nova.opt.glb` ≤ **400 KB**. Serve from `frontend/public/3d/` (same origin, long cache, hashed filename).
 
 Either route: the model is original. Do not import any downloaded/marketplace character.
 
@@ -434,7 +434,7 @@ Either route: the model is original. Do not import any downloaded/marketplace ch
 - **Scroll:** landing hero rotation and slight dolly linked to scroll progress of the 160vh hero track (sticky inner).
 - **Never** animate layout properties from the render loop; React state updates from 3D only on discrete events.
 
-### 7.6 Runtime architecture (`apps/web/src/three/`)
+### 7.6 Runtime architecture (`frontend/src/three/`)
 - **One** fixed full-viewport `<Canvas>` (`@react-three/fiber`) mounted at the shell level, `pointer-events: none`, `z-index` below interactive content but above background rails.
 - Each page places `<ScenePlaceholder scene="hero" />` divs; drei's `<View track={ref}>` renders each scene into its placeholder's rectangle (scissor), so we keep **one WebGL context**.
 - The canvas module is **lazy-loaded** (`React.lazy` + dynamic `import()`) only on routes that contain a placeholder, after first paint and when the placeholder is near the viewport (IntersectionObserver, `rootMargin: 200px`).
@@ -444,7 +444,7 @@ Either route: the model is original. Do not import any downloaded/marketplace ch
 - Handle `webglcontextlost` / `restored`; on loss, show fallbacks.
 
 ```tsx
-// apps/web/src/three/SceneCanvas.tsx (skeleton — complete it)
+// frontend/src/three/SceneCanvas.tsx (skeleton — complete it)
 import { Canvas } from "@react-three/fiber";
 import { View, ContactShadows } from "@react-three/drei";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
@@ -464,7 +464,7 @@ export default function SceneCanvas() {
   );
 }
 
-// apps/web/src/three/ScenePlaceholder.tsx
+// frontend/src/three/ScenePlaceholder.tsx
 // Renders a sized div + <View track={ref}> containing <NovaScene variant={scene} />.
 // If 3D is disabled (see useCanRender3D), renders <img src={fallbackSrc} alt={alt}> instead.
 ```
@@ -497,7 +497,7 @@ If the agent has the **Figma MCP** connected:
 4. Upload Nova renders with `upload_assets`.
 5. After code exists, keep Figma and code in sync; never let them drift on tokens.
 
-If Figma MCP is not available, produce `design/figma-spec/` markdown + PNG exports, and a teammate rebuilds them in Figma by hand from this file.
+If Figma MCP is not available, produce `ui/design/figma-spec/` markdown + PNG exports, and a teammate rebuilds them in Figma by hand from this file.
 
 ### 8.2 Figma file structure
 
@@ -627,7 +627,7 @@ Use CSS transitions first; use `motion` (Framer Motion successor) only for dialo
 | Fonts | 2 variable WOFF2 files, `font-display: swap`, preload only Geist |
 | Images | AVIF/WebP, `srcset` + `sizes`, `loading="lazy"` below the fold, explicit width/height |
 
-Rules: route-level code splitting; 3D chunk only on showcase routes; no icon fonts (use `lucide-react` tree-shaken); Lighthouse CI budget file (`apps/web/lighthouse-budget.json`) fails the build on regressions.
+Rules: route-level code splitting; 3D chunk only on showcase routes; no icon fonts (use `lucide-react` tree-shaken); Lighthouse CI budget file (`frontend/lighthouse-budget.json`) fails the build on regressions.
 
 ---
 
@@ -651,21 +651,21 @@ Check that `@react-three/fiber`'s React peer range matches the React version in 
 
 ### 15.2 Folder layout
 ```
-packages/ui/
+ui/
   src/
     styles/       tokens.css, signature.css, base.css
     components/   Button.tsx, TextField.tsx, ... (one file per component + index.ts)
     patterns/     FilterBar.tsx, SessionRow.tsx, DeadlineChip.tsx, AudienceBadge.tsx
     lib/          cn.ts, useReducedMotion.ts, useMediaQuery.ts
     index.ts
-apps/web/src/
+frontend/src/
   three/          SceneCanvas.tsx, ScenePlaceholder.tsx, nova/ (Nova.tsx, materials.ts, moods.ts, gaze.ts),
                   scenes/ (Hero.tsx, Auth.tsx, Network.tsx, Shield.tsx, Mini.tsx, Sleep.tsx),
                   useCanRender3D.ts, novaStore.ts
   layouts/        ShowcaseLayout.tsx, WorkspaceLayout.tsx, AuthLayout.tsx
   pages/          (visual shells; Frontend agent wires data)
   dev/            ui-gallery.tsx (dev-only)
-apps/web/public/3d/   nova.opt.glb (Route B), env-studio-1k.hdr, fallback/*.webp
+frontend/public/3d/   nova.opt.glb (Route B), env-studio-1k.hdr, fallback/*.webp
 design/
   3d/             nova_build.py (Route B), render_stills.md
   figma-spec/     exports if Figma MCP is unavailable
@@ -673,7 +673,7 @@ design/
 
 ### 15.3 Nova mood store (contract with the Frontend agent)
 ```ts
-// apps/web/src/three/novaStore.ts
+// frontend/src/three/novaStore.ts
 import { create } from "zustand";
 export type NovaMood = "idle" | "greet" | "thinking" | "success" | "error" | "locked" | "shield" | "sleep";
 interface NovaState { mood: NovaMood; lookAt: DOMRect | null;
@@ -690,7 +690,7 @@ export const useNova = create<NovaState>((set) => ({
 
 ### 15.4 Capability check
 ```ts
-// apps/web/src/three/useCanRender3D.ts
+// frontend/src/three/useCanRender3D.ts
 export function canRender3D(userAnimationsOn: boolean): boolean {
   if (!userAnimationsOn || typeof window === "undefined") return false;
   const nav = navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string }; deviceMemory?: number };
@@ -726,7 +726,7 @@ The API returns `{ code, message, requestId }`. Map codes to UI (Backend agent c
 | `INTERNAL_ERROR` | Error state with `requestId` and retry | `idle` |
 
 ### 16.2 Handoff rules
-- You export components from `@scc/ui`; the Frontend agent imports only from there. If a page needs a new visual pattern, add it to `packages/ui` first (and to Figma).
+- You export components from `@scc/ui`; the Frontend agent imports only from there. If a page needs a new visual pattern, add it to `ui` first (and to Figma).
 - Roles and permission labels come from `@scc/shared` — do not hardcode role lists in the UI.
 - Screenshots (desktop + mobile) of every changed screen go in the PR description, next to the Figma frame link.
 
@@ -738,7 +738,7 @@ The API returns `{ code, message, requestId }`. Map codes to UI (Backend agent c
 |---|---|---|
 | U1 Foundations | Figma variables + `tokens.css` + rails | Token names identical in Figma and code; contrast table passes |
 | U2 Nova | Model (Route A or B), 8 moods, 6 scenes, fallbacks | Runs ≥ 45 fps on a mid Android; fallbacks render with WebGL disabled; asset budgets met |
-| U3 Components | `packages/ui` §6 + Figma component sets | Every component has all states, keyboard support, gallery entry, axe clean |
+| U3 Components | `ui` §6 + Figma component sets | Every component has all states, keyboard support, gallery entry, axe clean |
 | U4 Showcase | Landing + auth + system pages | Matches Figma at 390/1440; LCP ≤ 2.5s on throttled mobile; reduced-motion verified |
 | U5 Workspace | All §9.2 shells for all roles | Mobile bottom tabs work; tables collapse; every global state designed and implemented |
 | U6 Polish | Prototype, handoff page, Lighthouse CI, axe CI | CI green; screen-reader pass done on 4 key flows |

@@ -1,14 +1,14 @@
 # Backend.md — Smart Campus Companion
 ### Role file for the Backend owner (M1, also Coordinator) and their AI agent
 
-> **Read `AGENTS.md` first** (contract, ownership, workflow). This file tells you *how to build the API, the worker, security, CI/CD and deployment*.
-> You own `apps/api/**`, `apps/worker/**`, `infra/**`, `.github/**` and root config. You consume `@scc/shared` and `@scc/db`; you do not edit them directly (contract changes go through `AGENTS.md` §9.4; model/index changes through the Database owner).
+> **Read `docs/AGENTS.md` first** (contract, ownership, workflow). This file tells you *how to build the API, the worker, security, CI/CD and deployment*.
+> You own `backend/**`, `backend/src/worker/**`, `backend/infra/**`, `.github/**` and root config. You consume `@scc/shared` and `@scc/db`; you do not edit them directly (contract changes go through `AGENTS.md` §9.4; model/index changes through the Database owner).
 
 ---
 
 ## 0. Agent operating instructions
 
-1. Read `AGENTS.md` → this file → `packages/shared/src/**` → `docs/agents/Database.md` §5–§6 (query helpers you must use).
+1. Read `AGENTS.md` → this file → `shared/src/**` → `docs/agents/Database.md` §5–§6 (query helpers you must use).
 2. Plan mode first. One module per task (e.g., "auth: login + lockout"), with the tests you will write. Wait for approval.
 3. **Build order:** §2 skeleton + config → §3 middleware pipeline → §4 auth → §5 RBAC → §6 content modules → §7 uploads → §8 caching → §9 worker → §10 observability → §11 tests → §12 infra/CI.
 4. Every route is registered through `defineRoute()` (§3.3) so validation, permission and the permission-matrix test can't be forgotten.
@@ -54,41 +54,35 @@ Browser ──HTTPS──► Cloudflare (WAF, DDoS, Turnstile, cache static)
 
 ---
 
-## 2. Project skeleton (`apps/api`)
+## 2. Project skeleton (`backend`)
 
 ```
-apps/api/
-  package.json  tsconfig.json  Dockerfile  vitest.config.ts
+backend/
+  package.json  tsconfig.json  vitest.config.ts
   src/
     server.ts                 # starts HTTP server, graceful shutdown
-    app.ts                    # createApp(deps) — used by server and tests
+    app.ts                    # createApp() — used by server and tests
     config/env.ts             # Zod-validated env (fails fast)
-    config/security.ts        # cookie names/flags, rate-limit table, CSP
-    lib/
-      errors.ts               # AppError, error codes from @scc/shared
-      define-route.ts         # route registry (§3.3)
-      redis.ts  cache.ts  storage.ts  mailer.ts  logger.ts  audit.ts  crypto.ts  time.ts
-    middleware/
-      request-id.ts  reject-dangerous-keys.ts  csrf.ts  authenticate.ts  require-auth.ts
-      require-permission.ts  require-recent-auth.ts  rate-limit.ts  error-handler.ts  not-found.ts
+    config/security.ts        # cookie names/flags, lifetimes, rate-limit table
+    lib/                      # errors, logger, crypto, redis, rate-limit, define-route, audit, mailer
+    middleware/               # request-id, security (helmet/origin/body guards), csrf, auth, error-handler
     modules/
-      auth/        routes.ts  service.ts  tokens.ts  passwords.ts  mfa.ts  google.ts  sessions.ts  lockout.ts
-      profile/     routes.ts  service.ts
-      announcements/ events/ resources/ openings/   (routes.ts, service.ts, policy.ts each)
-      search/  bookmarks/  notifications/  moderation/  reports/  admin/  public/  health/
-    jobs/queues.ts            # BullMQ queue producers (shared names with worker)
-  test/
-    helpers/ (app factory, db, login helpers, csrf helper)
-    auth/*.test.ts  rbac/permission-matrix.test.ts  modules/*.test.ts  security/*.test.ts
-apps/worker/
-  src/ index.ts  queues.ts  processors/ (email.ts file-scan.ts scheduler.ts cleanup.ts user-import.ts notify.ts)
+      health/routes.ts
+      auth/                   # routes, service, passwords, tokens, sessions, mfa, lockout, emails
+      profile/ announcements/ events/ resources/ openings/ search/ bookmarks/
+      notifications/ moderation/ reports/ admin/ public/      (added in later phases)
+    scripts/gen-secrets.ts
+    worker/                   # BullMQ entrypoint + processors (phase 2)
+  test/                       # global-setup, setup, client helper, *.test.ts
+  infra/                      # docker/, nginx/, k6/ (phase 3)
 ```
+One package, two entrypoints (`server.ts`, `worker/index.ts`), one image.
 Layering: **routes** (HTTP only) → **service** (business rules, transactions) → **@scc/db** (models + helpers). Policies (`policy.ts`) are pure functions: `canEdit(viewer, doc)`.
 
 ### 2.1 Config (`src/config/env.ts`)
 - Parse `process.env` with a Zod schema matching `AGENTS.md` §8.2. Crash on startup with a clear message listing missing keys (never print values).
 - In `production`: require `REDIS_URL`, JWT keys, `CSRF_SECRET`, `PASSWORD_PEPPER`, `MFA_ENCRYPTION_KEY`, S3 creds; forbid `ALLOWED_EMAIL_DOMAINS` empty; `TRUST_PROXY ≥ 1`.
-- `npm run gen:secrets -w apps/api` prints fresh values: Ed25519 keypair (PKCS8 PEM base64), `JWT_KEY_ID`, 32-byte base64 secrets. Developers paste them into their own `.env`.
+- `npm run gen:secrets -w backend` prints fresh values: Ed25519 keypair (PKCS8 PEM base64), `JWT_KEY_ID`, 32-byte base64 secrets. Developers paste them into their own `backend/.env`.
 
 ---
 
@@ -368,11 +362,11 @@ Rules: cache **only viewer-agnostic** data; add viewer-specific fields (`bookmar
 
 ---
 
-## 8. Worker (`apps/worker`, BullMQ)
+## 8. Worker (`backend/src/worker`, BullMQ)
 
 | Queue | Jobs | Notes |
 |---|---|---|
-| `email` | transactional mails | Retries 5× exponential (30 s base); idempotency key per message; templates in `apps/worker/src/templates/*.ts` (plain text + minimal escaped HTML) |
+| `email` | transactional mails | Retries 5× exponential (30 s base); idempotency key per message; templates in `backend/src/worker/templates/*.ts` (plain text + minimal escaped HTML) |
 | `file-scan` | resource + CSV scans | Concurrency 2 per worker (CPU/IO heavy); `jobId = resourceId` |
 | `notify` | targeted notifications, digests | Batches of 1 000 inserts |
 | `scheduler` | repeatable every 60 s: publish due announcements, expire, close openings; every 5 min: stats | Use BullMQ repeatable jobs with a fixed `jobId` so only one runs cluster-wide |
@@ -395,7 +389,7 @@ All processors: validate job payloads with Zod, never trust queue data blindly, 
 - [ ] Outbound HTTP only to an allow-list: Google OAuth endpoints, Cloudflare Turnstile, HIBP, S3 endpoint, SMTP. No user-supplied URLs fetched server-side (SSRF prevention).
 - [ ] Constant-time comparisons for tokens/hashes (`crypto.timingSafeEqual`).
 - [ ] Secrets only from env/secret manager; JWT key rotation documented (`kid` + previous public key accepted for 24 h).
-- [ ] `npm audit --audit-level=high` clean; Dependabot on.
+- [ ] `npm audit --audit-level=high` clean (Dependabot *alerts* may be enabled; no Dependabot PRs).
 - [ ] Error handler never leaks internals; `NODE_ENV=production` set in containers.
 - [ ] Containers run as non-root, read-only filesystem, no shell tools in the runtime image.
 
@@ -437,28 +431,28 @@ Vitest + Supertest against `createApp()` with real Mongo (`mongodb-memory-server
 | `security/injection` | `$ne`/`$gt` in body/query rejected, prototype-pollution keys rejected |
 | `security/rate-limits` | each bucket returns 429 with `Retry-After` |
 
-Coverage target `apps/api` ≥ **80% lines**, 100% of `modules/auth`.
+Coverage target `backend` ≥ **80% lines**, 100% of `modules/auth`.
 
 ### 11.3 Contract tests
 Response bodies are validated against `@scc/shared` DTO schemas in tests (`expect(userDto.parse(res.body.user))`). A contract change without matching tests fails CI.
 
-### 11.4 Load tests (`infra/k6/`)
+### 11.4 Load tests (`backend/infra/k6/`)
 Scenarios: `browse.js` (80%: feed, lists, details), `search.js` (10%), `login.js` (5%, with pre-seeded users and MFA disabled test accounts), `download.js` (4%), `publish.js` (1%, faculty). Run against a **staging** deployment seeded with `db:seed:load` (1 lakh users). Thresholds: `http_req_duration{p(95)}<300`, `http_req_failed<0.005`. Save the report to `docs/lab/load-test-report.md` (needed for the demo).
 
 ---
 
 ## 12. Infrastructure, CI/CD, deployment
 
-### 12.1 Local (`docker-compose.yml`)
+### 12.1 Local (`backend/docker-compose.yml`)
 Services: `mongo` (replica set `rs0`, healthcheck runs `rs.initiate` once), `redis`, `minio` (+ bucket init job creating `scc-quarantine`, `scc-files` with CORS for `http://localhost:5173`), `mailpit` (SMTP 1025, UI 8025), `clamav` (port 3310; optional profile `scan` because it's heavy — when off, the worker uses a dev stub that marks files clean **only when `NODE_ENV=development`**).
-`npm run dev` = `docker compose up -d` + `concurrently` (api via `tsx watch`, worker, web via Vite).
+`npm run infra:up` starts the services; `npm run dev` runs the API with `tsx watch`.
 
 ### 12.2 Containers
-- `infra/docker/api.Dockerfile`: multi-stage (`node:22-alpine` build → runtime with only `dist` + prod deps), `USER node`, `NODE_ENV=production`, `HEALTHCHECK` hitting `/api/health`, read-only root FS compatible.
-- `infra/docker/worker.Dockerfile`: same pattern.
-- `infra/docker/web.Dockerfile`: build SPA → `nginx:alpine` serving `/` and proxying `/api` to the API service.
+- `backend/infra/docker/api.Dockerfile`: multi-stage (`node:22-alpine` build → runtime with only `dist` + prod deps), `USER node`, `NODE_ENV=production`, `HEALTHCHECK` hitting `/api/health`, read-only root FS compatible.
+- `backend/infra/docker/worker.Dockerfile`: same pattern.
+- `backend/infra/docker/web.Dockerfile`: build SPA → `nginx:alpine` serving `/` and proxying `/api` to the API service.
 
-### 12.3 nginx (`infra/nginx/default.conf`) — same origin + browser security headers
+### 12.3 nginx (`backend/infra/nginx/default.conf`) — same origin + browser security headers
 ```nginx
 server {
   listen 8080;
@@ -505,10 +499,10 @@ Always check each provider's current pricing and free-tier limits before committ
 |---|---|---|
 | `ci.yml` | PR + push to `dev`/`main` | `npm ci` → lint → typecheck → unit/integration tests (services: mongo replica set, redis) → build → upload coverage |
 | `security.yml` | PR + weekly | `npm audit --audit-level=high`, gitleaks, CodeQL (javascript-typescript), Trivy scan of built images (fail on HIGH/CRITICAL with fix available) |
-| `e2e.yml` | PR to `main` | `docker compose up` → seed → Playwright (from `apps/web`) → upload traces on failure |
-| `lighthouse.yml` | PR touching `apps/web` | Lighthouse CI with `apps/web/lighthouse-budget.json` (config supplied by Frontend/UI) |
+| `e2e.yml` | PR to `main` | `docker compose up` → seed → Playwright (from `frontend`) → upload traces on failure |
+| `lighthouse.yml` | PR touching `frontend` | Lighthouse CI with `frontend/lighthouse-budget.json` (config supplied by Frontend/UI) |
 | `deploy.yml` | push to `main` (+ manual) | Build + push images to GHCR (tag = git SHA) → run `db:migrate` + `db:sync-indexes` (migrator credentials) → deploy api/worker/web → smoke test `/api/ready` + login of a canary test account → notify team |
-Plus `dependabot.yml` (npm weekly, actions monthly), `CODEOWNERS`, PR template, issue templates (`bug`, `change-request`, `contract`). Branch protection on `main` and `dev`: required checks `ci`, `security`, 1 approval, CODEOWNERS review.
+Plus `CODEOWNERS`, PR template, issue templates (`bug`, `change-request`, `contract`). Branch protection on `main` and `dev`: required checks `ci`, `security`, 1 approval, CODEOWNERS review.
 
 ### 12.6 Runtime behaviour
 - Graceful shutdown on `SIGTERM`: stop accepting connections, finish in-flight requests (≤ 25 s), close Mongo/Redis/queues.
@@ -519,7 +513,7 @@ Plus `dependabot.yml` (npm weekly, actions monthly), `CODEOWNERS`, PR template, 
 
 ## 13. Day-0 coordinator checklist (M1)
 - [ ] Create the GitHub repo/org, add the 3 members, enable branch protection on `main` and `dev`.
-- [ ] Push the skeleton: root configs, workspaces, `packages/shared` skeleton with roles/permissions/errors from `AGENTS.md`, empty `packages/db`, `packages/ui`, `apps/*`, `docs/agents/*.md`, `CLAUDE.md`, `.cursor/rules/agents.mdc`, `.env.example`, `docker-compose.yml`, CI workflows, CODEOWNERS with real usernames.
+- [ ] Push the skeleton: root configs, workspaces, `shared` skeleton with roles/permissions/errors from `AGENTS.md`, `database` with the auth models, `backend` (with its `.env.example` and `docker-compose.yml`), `docs/AGENTS.md`, `docs/agents/*.md`, CI workflows, CODEOWNERS with real usernames.
 - [ ] Verify a fresh clone works: `npm install && npm run dev` brings up the stack and `/api/health` returns 200.
 - [ ] Create the GitHub Project board with columns *Backlog / In progress / Review / Done* and the Phase 0–3 issues from `AGENTS.md` §11.
 - [ ] Set up Atlas project, Cloudflare account, storage bucket, email provider; store secrets in the hosting provider's secret manager (never in the repo).
