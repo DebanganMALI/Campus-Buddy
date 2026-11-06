@@ -1,0 +1,56 @@
+/* Minimal working styles so pages are usable now. Tanisha's components replace these. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+h1 { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; margin: var(--space-2) 0 var(--space-4); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+
+.eyebrow { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin: 0; }
+.muted { color: var(--color-ink-2); }
+.small { font-size: 13px; }
+
+.center-screen { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-4); }
+.card { background: var(--color-bg-raised); border: 1px solid var(--color-line); padding: var(--space-6); width: 100%; }
+.narrow { max-width: 420px; }
+.auth-card { max-width: 400px; }
+
+.page { max-width: 1200px; margin: 0 auto; padding: var(--space-4); }
+.topbar { display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-line); margin-bottom: var(--space-6); }
+
+.field { margin-bottom: var(--space-4); }
+.field label { display: block; margin-bottom: var(--space-1); color: var(--color-ink-2); font-size: 13px; }
+.field input {
+  width: 100%; min-height: 44px; padding: 0 var(--space-3);
+  background: var(--color-bg-sunken); color: var(--color-ink);
+  border: 1px solid var(--color-line-strong); border-radius: var(--radius-s); font: inherit;
+}
+.field input[aria-invalid="true"] { border-left: 3px solid var(--color-danger); }
+.input-row { display: flex; gap: var(--space-2); }
+.field-error { color: var(--color-danger); font-size: 13px; margin: var(--space-1) 0 0; }
+.form-error { border-left: 3px solid var(--color-danger); background: #ff5d6c14; padding: var(--space-3); margin: 0 0 var(--space-4); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-4);
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--color-ink-2); background: transparent; border: 1px solid var(--color-line-strong);
+  text-decoration: none; cursor: pointer;
+}
+.btn:hover { color: var(--color-ink); background: var(--color-bg-sunken); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { color: var(--color-ink); border: 1px solid transparent; background: linear-gradient(var(--color-bg), var(--color-bg)) padding-box, var(--aurora) border-box; }
+.btn-ghost { border-color: transparent; }
+.full { width: 100%; }
+
+.mock-hint { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px dashed var(--color-line-strong); }
+code { font-family: var(--font-mono); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+}
