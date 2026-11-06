@@ -1,0 +1,27 @@
+/* Temporary copy of the colour tokens from UI-UX.md §3.1 (same names).
+   Tanisha owns the final tokens; replace this file when hers is ready. */
+:root {
+  --color-bg: #09080d;
+  --color-bg-raised: #0f0d14;
+  --color-bg-sunken: #060509;
+  --color-line: #221e2a;
+  --color-line-strong: #3a3345;
+  --color-ink: #edebf0;
+  --color-ink-2: #c2bdc9;
+  --color-muted: #8a8492;
+  --color-signal: #ff7a2e;
+  --color-focus: #8fe6d6;
+  --color-success: #5fd39a;
+  --color-warning: #f2c94c;
+  --color-danger: #ff5d6c;
+  --color-info: #6cb8ff;
+  --aurora: linear-gradient(120deg, #7be8c8 0%, #5bc2db 25%, #8b5be0 50%, #e0687e 75%, #ebd877 100%);
+
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  --radius-s: 4px;
+  color-scheme: dark;
+}
