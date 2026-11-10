@@ -7,6 +7,7 @@ import { errorHandler, notFound } from "./middleware/error-handler.js";
 import { requestId } from "./middleware/request-id.js";
 import { originGuard, rejectDangerousKeys, securityHeaders } from "./middleware/security.js";
 import { verifyCsrf } from "./middleware/csrf.js";
+import { rateLimit } from "./lib/rate-limit.js";
 import { authRouter } from "./routes/auth.js";
 import { announcementsRouter } from "./routes/announcements.js";
 import { eventsRouter } from "./routes/events.js";
@@ -26,6 +27,7 @@ export function createApp(): Express {
   app.use(securityHeaders);
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
+  app.use(rateLimit("global")); // coarse per-IP ceiling across the whole API
   app.use(originGuard); // reject cross-origin unsafe requests
   app.use(rejectDangerousKeys); // block NoSQL-operator / prototype-pollution keys
   app.use(verifyCsrf); // double-submit CSRF check on unsafe methods

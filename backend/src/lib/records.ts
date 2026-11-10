@@ -20,6 +20,7 @@ export interface UserRecord {
   status: UserStatus;
   passwordHash?: string;
   mfa?: { enabled?: boolean };
+  security?: { failedLogins?: number; lockUntil?: Date | null; lastFailedAt?: Date | null };
   lastFeedSeenAt?: Date;
   createdAt: Date;
 }
