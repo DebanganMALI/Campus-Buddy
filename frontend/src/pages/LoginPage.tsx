@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { loginBody } from "@scc/shared";
 import { login } from "../api/endpoints/auth";
 import { isApiError } from "../api/errors";
 import { useAuth } from "../auth/auth-context";
+import { Field, FormError } from "../components/Field";
+import { Icon } from "../components/Icon";
+import { AuthLayout } from "../layouts/AuthLayout";
 import { toFieldErrors, type FieldErrors } from "../lib/form-errors";
+import { useDocumentTitle } from "../lib/use-document-title";
 
 const IS_MOCK = import.meta.env.MODE === "mock";
 
 export function LoginPage() {
+  useDocumentTitle("Log in");
   const { refetchMe } = useAuth();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,10 +24,7 @@ export function LoginPage() {
   const [pending, setPending] = useState(false);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const passwordRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    document.title = "Log in · Campus Companion";
-  }, []);
+  const justRegistered = params.get("registered") === "1";
 
   // Countdown after "too many attempts"; the button stays disabled until it reaches 0
   useEffect(() => {
@@ -84,90 +88,94 @@ export function LoginPage() {
   const blocked = pending || waitSeconds > 0;
 
   return (
-    <main className="center-screen">
-      <div className="card auth-card">
-        <p className="eyebrow">Campus Companion</p>
-        <h1>Log in</h1>
+    <AuthLayout>
+      <div className="auth-card">
+        <div className="stack-s">
+          <p className="eyebrow">Welcome back</p>
+          <h1>Log in</h1>
+          <p className="muted">Use your college email to continue.</p>
+        </div>
 
-        {formError && (
-          <p className="form-error" role="alert">
-            {formError}
-            {waitSeconds > 0 && ` Try again in ${waitSeconds}s.`}
+        {justRegistered && !formError && (
+          <p className="form-note" role="status">
+            Check your inbox for the verification link, then log in.
           </p>
         )}
+        <FormError message={formError && waitSeconds > 0 ? `${formError} Try again in ${waitSeconds}s.` : formError} />
 
         <form
+          className="form-grid"
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
             void submit();
           }}
         >
-          <div className="field">
-            <label htmlFor="email">College email</label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={fieldErrors.email ? true : undefined}
-              aria-describedby={fieldErrors.email ? "email-error" : undefined}
-            />
-            {fieldErrors.email && (
-              <p id="email-error" className="field-error">
-                {fieldErrors.email}
-              </p>
-            )}
-          </div>
-
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <div className="input-row">
+          <Field label="College email" error={fieldErrors.email}>
+            {(a) => (
               <input
-                id="password"
-                ref={passwordRef}
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                spellCheck={false}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                aria-invalid={fieldErrors.password ? true : undefined}
-                aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                {...a}
+                className="input"
+                type="email"
+                autoComplete="email"
+                inputMode="email"
+                placeholder="name@iem.edu.in"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
-              <button
-                type="button"
-                className="btn btn-ghost"
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword((v) => !v)}
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-            {fieldErrors.password && (
-              <p id="password-error" className="field-error">
-                {fieldErrors.password}
-              </p>
             )}
-          </div>
+          </Field>
 
-          <button type="submit" className="btn btn-primary full" disabled={blocked} aria-busy={pending || undefined}>
-            {pending ? "Logging in…" : "Log in"}
+          <Field label="Password" error={fieldErrors.password}>
+            {(a) => (
+              <div className="input-wrap">
+                <input
+                  {...a}
+                  ref={passwordRef}
+                  className="input"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  spellCheck={false}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="icon-btn trail-btn"
+                  aria-pressed={showPassword}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  <Icon name={showPassword ? "eyeOff" : "eye"} />
+                </button>
+              </div>
+            )}
+          </Field>
+
+          <button type="submit" className="btn btn-dark btn-block" disabled={blocked} aria-busy={pending || undefined}>
+            {pending ? <span className="spinner" aria-hidden /> : null}
+            {pending ? "Logging in…" : waitSeconds > 0 ? `Try again in ${waitSeconds}s` : "Log in"}
           </button>
         </form>
 
+        <p className="auth-switch">
+          New here? <Link to="/register">Create an account</Link>
+        </p>
+
         {IS_MOCK && (
           <aside className="mock-hint">
-            <p className="eyebrow">Mock mode · sample accounts</p>
-            <p className="small">
-              student.a@iem.edu.in · faculty.b@iem.edu.in · admin.c@iem.edu.in
-              <br />
-              Password: <code>demo-password-123</code> · Try locked@iem.edu.in for the lock screen.
-            </p>
+            <p className="eyebrow">Mock mode: sample accounts</p>
+            <ul className="mock-list">
+              <li><code>student.a@iem.edu.in</code> student, CSE Year 3</li>
+              <li><code>student.d@iem.edu.in</code> student, ECE Year 2</li>
+              <li><code>faculty.b@iem.edu.in</code> faculty</li>
+              <li><code>admin.c@iem.edu.in</code> admin</li>
+              <li><code>locked@iem.edu.in</code> shows the lock timer, <code>student.e@…</code> is suspended</li>
+            </ul>
+            <p>Password for all: <code>demo-password-123</code></p>
           </aside>
         )}
       </div>
-    </main>
+    </AuthLayout>
   );
 }

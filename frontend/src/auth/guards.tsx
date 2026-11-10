@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation, useSearchParams } from "react-router";
-import type { Role } from "@scc/shared";
+import type { Permission, Role } from "@scc/shared";
 import { ForbiddenState, FullScreenLoading, ServerErrorState } from "../components/states";
 import { useAuth } from "./auth-context";
 import { safeReturnTo } from "./return-url";
@@ -20,12 +20,19 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 /**
- * Hides pages from the wrong role. This is a UI convenience only:
+ * Hides pages from the wrong role. UI convenience only:
  * the server must still refuse the API call (403), which the demo proves with Postman.
  */
 export function RequireRole({ roles, children }: { roles: readonly Role[]; children: ReactNode }) {
   const { state } = useAuth();
   if (state.status !== "authenticated" || !roles.includes(state.user.role)) return <ForbiddenState />;
+  return <>{children}</>;
+}
+
+/** Same idea, but checks a permission from shared/permissions.ts instead of a role list. */
+export function RequirePermission({ anyOf, children }: { anyOf: readonly Permission[]; children: ReactNode }) {
+  const { can } = useAuth();
+  if (!anyOf.some((p) => can(p))) return <ForbiddenState />;
   return <>{children}</>;
 }
 

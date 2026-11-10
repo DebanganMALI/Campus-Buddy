@@ -1,27 +1,97 @@
-/* Temporary copy of the colour tokens from UI-UX.md §3.1 (same names).
-   Tanisha owns the final tokens; replace this file when hers is ready. */
+/* ============================================================
+   SCC design tokens — "Editorial Night & Mint"
+   One source of truth for colour, type, space, shape and motion.
+   Light editorial surfaces for reading; deep navy bands for heroes.
+   Contrast checked: every text/background pair below is ≥ 4.5:1.
+   ============================================================ */
 :root {
-  --color-bg: #09080d;
-  --color-bg-raised: #0f0d14;
-  --color-bg-sunken: #060509;
-  --color-line: #221e2a;
-  --color-line-strong: #3a3345;
-  --color-ink: #edebf0;
-  --color-ink-2: #c2bdc9;
-  --color-muted: #8a8492;
-  --color-signal: #ff7a2e;
-  --color-focus: #8fe6d6;
-  --color-success: #5fd39a;
-  --color-warning: #f2c94c;
-  --color-danger: #ff5d6c;
-  --color-info: #6cb8ff;
-  --aurora: linear-gradient(120deg, #7be8c8 0%, #5bc2db 25%, #8b5be0 50%, #e0687e 75%, #ebd877 100%);
+  /* Surfaces (light, editorial) */
+  --color-paper: #f3f2ee;          /* page background, warm off-white */
+  --color-surface: #ffffff;        /* cards, panels */
+  --color-surface-2: #f8f7f4;      /* subtle wells, table headers */
+  --color-line: #e2e0d9;           /* hairlines, card borders */
+  --color-line-strong: #c7c4ba;    /* input borders, hover borders */
 
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  /* Text on light */
+  --color-ink: #161a22;            /* headings, primary text (16:1) */
+  --color-ink-2: #454b57;          /* body text (7.7:1) */
+  --color-muted: #5d6370;          /* metadata, labels (5.4:1) */
 
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
-  --space-6: 24px; --space-8: 32px; --space-12: 48px;
-  --radius-s: 4px;
-  color-scheme: dark;
+  /* Night (dark, immersive bands) */
+  --color-night: #0e1726;          /* midnight navy */
+  --color-night-2: #172235;        /* raised surface on night */
+  --color-night-line: #27344b;
+  --color-on-night: #e9ecf2;       /* text on night (15.8:1) */
+  --color-on-night-2: #aeb8c8;
+  --color-on-night-3: #8c97aa;     /* tertiary text on night (6.1:1) */     /* secondary text on night (8.9:1) */
+
+  /* Brand accents (restrained) */
+  --color-mint: #a8e6cf;           /* accent on night (12.5:1) */
+  --color-mint-soft: #e3f5ee;      /* tinted backgrounds on light */
+  --color-mint-wash: #bfebda;
+  --color-teal: #1e6b5f;           /* primary action + links on light (5.6:1) */
+  --color-teal-strong: #155248;    /* hover/pressed */
+
+  /* Section accents — one per content type, used for wayfinding only.
+     "-ink" variants are for text/icons on light; base values are for night surfaces. */
+  --cat-news: #a8e6cf;      --cat-news-ink: #1e6b5f;      --cat-news-soft: #e3f5ee;
+  --cat-events: #9fc8ff;    --cat-events-ink: #2459a6;    --cat-events-soft: #eaf2ff;
+  --cat-resources: #f2cf8d; --cat-resources-ink: #8a5a00; --cat-resources-soft: #fbf1dc;
+  --cat-openings: #f5a894;  --cat-openings-ink: #a3412a;  --cat-openings-soft: #fdece7;
+
+  /* Status (always paired with text or icon, never colour alone) */
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-warning: #9a4a00;
+  --color-warning-soft: #fff4e5;
+  --color-success: #067647;
+  --color-success-soft: #e6f6ee;
+  --color-focus: #1e6b5f;
+
+  /* Typography — self-hosted variable fonts, with safe fallbacks */
+  --font-display: "Newsreader Variable", "Newsreader", Georgia, "Times New Roman", serif;
+  --font-ui: "Archivo Variable", "Archivo", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --text-display: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);   /* hero */
+  --text-h1: clamp(2rem, 1.5rem + 1.8vw, 3rem);             /* page title */
+  --text-h2: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);          /* section */
+  --text-h3: 1.1875rem;                                     /* card title */
+  --text-body: 1rem;
+  --text-small: 0.875rem;
+  --text-label: 0.75rem;                                    /* uppercase labels */
+
+  /* Space (4px base) */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px; --space-20: 80px;
+
+  /* Shape */
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* Depth */
+  --shadow-1: 0 1px 2px rgb(20 22 28 / 0.06), 0 1px 1px rgb(20 22 28 / 0.04);
+  --shadow-2: 0 8px 24px rgb(20 22 28 / 0.08);
+  --shadow-3: 0 24px 60px rgb(11 18 32 / 0.18);
+
+  /* Texture: a very fine film grain for night surfaces (inline SVG, no request) */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 0.68, 0, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 420ms;
+
+  /* Layout */
+  --content-max: 1200px;
+  --reading-max: 68ch;
+  --header-h: 68px;
+  --tabbar-h: 64px;
+
+  color-scheme: light;
 }
