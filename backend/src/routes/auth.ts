@@ -12,6 +12,7 @@ import { env } from "../config/env.js";
 import { LOCKOUT } from "../config/security.js";
 import { csrfBinding, issueCsrf } from "../middleware/csrf.js";
 import { requireAuth } from "../middleware/auth.js";
+import { audit } from "../lib/audit.js";
 import { AppError } from "../lib/errors.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { clientIp, consume, rateLimit } from "../lib/rate-limit.js";
@@ -60,9 +61,10 @@ authRouter.post("/register", rateLimit("register"), async (req, res) => {
   const body = registerBody.parse(req.body);
   const existing = await User.findOne({ email: body.email }).select("_id").lean();
 
+  let createdId: string | null = null;
   if (emailDomainAllowed(body.email) && !existing) {
     const passwordHash = await hashPassword(body.password);
-    await User.create({
+    const created = await User.create({
       email: body.email,
       name: body.name,
       rollNo: body.rollNo,
@@ -74,8 +76,10 @@ authRouter.post("/register", rateLimit("register"), async (req, res) => {
       emailVerified: true,
       passwordHash,
     });
+    createdId = String(created._id);
   }
 
+  audit(req, { action: "auth.register", result: "success", actorId: createdId });
   res.status(202).json({ message: REGISTER_MESSAGE });
 });
 
@@ -87,6 +91,7 @@ authRouter.post("/login", rateLimit("login"), async (req, res) => {
 
   // Refuse while a temporary account lock is active.
   if (user?.security?.lockUntil && user.security.lockUntil > now) {
+    audit(req, { action: "auth.login.locked", result: "denied", actorId: String(user._id) });
     const retryAfter = Math.ceil((user.security.lockUntil.getTime() - now.getTime()) / 1000);
     throw new AppError("ACCOUNT_LOCKED", undefined, { retryAfter });
   }
@@ -94,10 +99,14 @@ authRouter.post("/login", rateLimit("login"), async (req, res) => {
   const ok = user?.passwordHash ? await verifyPassword(user.passwordHash, body.password) : false;
   if (!user || !ok) {
     if (user) await recordFailedLogin(user);
+    audit(req, { action: "auth.login", result: "failure", actorId: user ? String(user._id) : null });
     await consume("loginFailIp", clientIp(req)); // IP brute-force guard → 429 once exceeded
     throw new AppError("INVALID_CREDENTIALS");
   }
-  if (user.status === "suspended") throw new AppError("ACCOUNT_SUSPENDED");
+  if (user.status === "suspended") {
+    audit(req, { action: "auth.login", result: "denied", actorId: String(user._id), meta: { reason: "suspended" } });
+    throw new AppError("ACCOUNT_SUSPENDED");
+  }
   if (user.status !== "active") throw new AppError("INVALID_CREDENTIALS");
 
   const sid = await createSession(res, req, { _id: user._id, role: user.role });
@@ -107,6 +116,7 @@ authRouter.post("/login", rateLimit("login"), async (req, res) => {
   );
   issueCsrf(res, sid); // bind the new CSRF token to the new session
 
+  audit(req, { action: "auth.login", result: "success", actorId: String(user._id), actorRole: user.role });
   res.json(loginResponse.parse({ status: "OK", user: toUserDto(user) }));
 });
 
@@ -116,6 +126,7 @@ authRouter.post("/logout", async (req, res) => {
   if (cookie) await revokeSession(cookie.sid, "logout");
   clearSessionCookie(res);
   issueCsrf(res, "anon");
+  audit(req, { action: "auth.logout", result: "success" });
   res.status(204).end();
 });
 
