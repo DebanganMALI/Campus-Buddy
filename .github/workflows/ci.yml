@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: typecheck · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - name: Install workspaces & build libraries
+        run: npm ci
+      - name: Typecheck (shared · db · backend)
+        run: npm run typecheck
+      - name: Build (shared · db · backend)
+        run: npm run build
+      - name: Lint (advisory)
+        run: npm run lint
+        continue-on-error: true
+      - name: Install frontend
+        run: npm ci
+        working-directory: frontend
+      - name: Typecheck frontend
+        run: npm run typecheck
+        working-directory: frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
