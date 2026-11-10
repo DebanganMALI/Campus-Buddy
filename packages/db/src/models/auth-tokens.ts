@@ -10,7 +10,7 @@ const authTokenSchema = new Schema({
   type: { type: String, required: true, enum: AUTH_TOKEN_TYPES },
   
   // The raw token is never stored, only its SHA-256 hash. Hidden by default.
-  tokenHash: { type: String, required: true, unique: true, select: false },
+  tokenHash: { type: String, required: true, select: false },
   
   attempts: { type: Number, default: 0 },
   meta: Schema.Types.Mixed,

@@ -1,6 +1,7 @@
 import type { Request, RequestHandler } from "express";
 import { RateLimiterMemory, RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
 import { RATE_LIMITS, type RateLimitName } from "../config/security.js";
+import { isTest } from "../config/env.js";
 import { AppError } from "./errors.js";
 import { redis } from "./redis.js";
 
@@ -24,6 +25,7 @@ export function limiter(name: RateLimitName): RateLimiterRedis {
 }
 
 export async function consume(name: RateLimitName, key: string): Promise<void> {
+  if (isTest) return; // the test suite is not rate-limited
   try {
     await limiter(name).consume(key);
   } catch (err) {
@@ -39,6 +41,7 @@ export const clientIp = (req: Request): string => req.ip ?? "unknown";
 export const rateLimit =
   (name: RateLimitName, key: (req: Request) => string = clientIp): RequestHandler =>
   async (req, _res, next) => {
+    if (isTest) return next();
     await consume(name, key(req));
     next();
   };

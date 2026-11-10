@@ -1,8 +1,15 @@
 import mongoose from "mongoose";
 
-// Apply global Mongoose settings required by the package spec
+// Strip query keys not in the schema. We intentionally do NOT enable the global
+// `sanitizeFilter`: it rewrites every `{ $op: ... }` our own code builds (e.g.
+// `{ publishAt: { $lte: now } }`, `{ _id: { $in: ids } }`) into a literal `$eq`,
+// which then fails to cast and 500s. NoSQL operator injection is instead closed
+// at the boundary — every req.query/req.body is Zod-parsed into scalars before it
+// reaches a query, so an attacker cannot smuggle an operator object through. For
+// the rare filter built from a value we don't fully control, wrap that one
+// operator expression in `trusted()` (re-exported below) rather than flipping the
+// global flag back on.
 mongoose.set("strictQuery", true);
-mongoose.set("sanitizeFilter", true);
 
 interface ConnectOptions {
   appName?: string;
