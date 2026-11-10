@@ -29,6 +29,8 @@ export interface SessionRecord {
   _id: string;
   userId: Types.ObjectId;
   refreshHash: string;
+  prevRefreshHash?: string | null;
+  rotatedAt?: Date | null;
   authTime: Date;
   expiresAt: Date;
   absoluteExpiresAt: Date;

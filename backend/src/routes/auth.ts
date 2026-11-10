@@ -17,7 +17,13 @@ import { AppError } from "../lib/errors.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { clientIp, consume, rateLimit } from "../lib/rate-limit.js";
 import type { UserRecord } from "../lib/records.js";
-import { clearSessionCookie, createSession, readSessionCookie, revokeSession } from "../lib/session.js";
+import {
+  clearSessionCookie,
+  createSession,
+  readSessionCookie,
+  revokeAllSessions,
+  revokeSession,
+} from "../lib/session.js";
 import { toUserDto } from "../lib/user-dto.js";
 
 // Same reply whether or not the email is free, so an attacker can't learn which
@@ -128,6 +134,18 @@ authRouter.post("/logout", async (req, res) => {
   issueCsrf(res, "anon");
   audit(req, { action: "auth.logout", result: "success" });
   res.status(204).end();
+});
+
+// POST /api/auth/logout-all — revoke every active session for this user
+// ("log out everywhere"), e.g. after a suspected compromise.
+authRouter.post("/logout-all", requireAuth, async (req, res) => {
+  const auth = req.auth;
+  if (!auth) throw new AppError("UNAUTHENTICATED");
+  const revoked = await revokeAllSessions(auth.userId, "logout_all");
+  clearSessionCookie(res);
+  issueCsrf(res, "anon");
+  audit(req, { action: "auth.logout_all", result: "success", actorId: auth.userId, meta: { revoked } });
+  res.json({ status: "OK", revoked });
 });
 
 // GET /api/auth/me — who am I? The answer comes from the cookie, never from JS.
