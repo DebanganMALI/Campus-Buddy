@@ -34,6 +34,14 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
   await Session.updateOne({ _id: session._id }, { $set: { lastUsedAt: now, expiresAt: nextExpiry } });
 
   const role: Role = user.role;
-  req.auth = { userId: String(user._id), role, sid: session._id, authTime: session.authTime.getTime(), mfa: "ok" };
+  req.auth = {
+    userId: String(user._id),
+    role,
+    sid: session._id,
+    authTime: session.authTime.getTime(),
+    mfa: "ok",
+    department: user.department,
+    ...(typeof user.year === "number" ? { year: user.year } : {}),
+  };
   next();
 };

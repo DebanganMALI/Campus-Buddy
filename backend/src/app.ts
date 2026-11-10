@@ -8,6 +8,10 @@ import { requestId } from "./middleware/request-id.js";
 import { originGuard, rejectDangerousKeys, securityHeaders } from "./middleware/security.js";
 import { verifyCsrf } from "./middleware/csrf.js";
 import { authRouter } from "./routes/auth.js";
+import { announcementsRouter } from "./routes/announcements.js";
+import { eventsRouter } from "./routes/events.js";
+import { resourcesRouter } from "./routes/resources.js";
+import { openingsRouter } from "./routes/openings.js";
 
 // Builds the Express app. Kept separate from server.ts so tests can import the
 // app without opening a port.
@@ -31,6 +35,10 @@ export function createApp(): Express {
   });
 
   app.use("/api/auth", authRouter);
+  app.use("/api/announcements", announcementsRouter);
+  app.use("/api/events", eventsRouter);
+  app.use("/api/resources", resourcesRouter);
+  app.use("/api/openings", openingsRouter);
 
   app.use(notFound);
   app.use(errorHandler);

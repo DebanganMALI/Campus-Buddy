@@ -13,7 +13,15 @@ declare global {
     interface Request {
       id: string;
       token?: { claims: AccessClaims; expired: boolean } | { invalid: true };
-      auth?: { userId: string; role: Role; sid: string; authTime: number; mfa: "ok" | "enroll" };
+      auth?: {
+        userId: string;
+        role: Role;
+        sid: string;
+        authTime: number;
+        mfa: "ok" | "enroll";
+        department: string;
+        year?: number;
+      };
     }
   }
 }
