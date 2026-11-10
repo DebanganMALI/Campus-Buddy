@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ROLES } from "../roles.js";
 import { DEPARTMENTS } from "../constants.js";
+import { name } from "./common.js";
 
 export const userStatus = z.enum(["pending", "active", "suspended", "deleted"]);
 
@@ -32,3 +33,17 @@ export const sessionDto = z.object({
   current: z.boolean(),
 });
 export type SessionDTO = z.infer<typeof sessionDto>;
+
+// The viewer's own profile: the public user plus private, editable fields.
+export const profileDto = userDto.extend({
+  phone: z.string().optional(),
+  bio: z.string().optional(),
+});
+export type ProfileDTO = z.infer<typeof profileDto>;
+
+export const profilePatch = z.strictObject({
+  name: name.optional(),
+  phone: z.string().max(20).optional(),
+  bio: z.string().max(300).optional(),
+});
+export type ProfilePatch = z.infer<typeof profilePatch>;
