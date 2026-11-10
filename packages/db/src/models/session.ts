@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from "mongoose";
-import { basePlugin } from "../plugins/base";
+import { basePlugin } from "../plugins/base.js";
 
 const sessionSchema = new Schema({
   // Override default ObjectId with a required String (for the 32 random hex characters)

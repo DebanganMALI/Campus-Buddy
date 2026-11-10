@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from "mongoose";
-import { basePlugin } from "../plugins/base";
+import { basePlugin } from "../plugins/base.js";
 
 // Export the specific token types required by the backend
 export const AUTH_TOKEN_TYPES = ["email_verify", "password_reset", "invite", "mfa_challenge", "oauth_state"] as const;

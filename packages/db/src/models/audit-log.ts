@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType } from "mongoose";
-import { basePlugin } from "../plugins/base";
+import { basePlugin } from "../plugins/base.js";
 
 const auditLogSchema = new Schema({
   actorId: { type: Schema.Types.ObjectId, ref: "User", default: null },

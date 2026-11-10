@@ -1,11 +1,11 @@
 // Export Connection Helpers
-export * from "./connect";
+export * from "./connect.js";
 
 // Export Security & Encryption
-export * from "./crypto";
+export * from "./crypto.js";
 
 // Export Models & Types
-export * from "./models/user";
-export * from "./models/session";
-export * from "./models/auth-tokens"; // Note: using your exact filename!
-export * from "./models/audit-log";
+export * from "./models/user.js";
+export * from "./models/session.js";
+export * from "./models/auth-tokens.js"; // Note: using your exact filename!
+export * from "./models/audit-log.js";

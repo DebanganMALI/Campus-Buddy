@@ -32,7 +32,7 @@ export function decryptField(encryptedText: string): string {
   const parts = encryptedText.split(":");
   if (parts.length !== 4) throw new Error("Invalid encrypted field format");
   
-  const [, ivStr, tagStr, cipherStr] = parts;
+  const [, ivStr, tagStr, cipherStr] = parts as [string, string, string, string];
   
   const iv = Buffer.from(ivStr, "base64url");
   const tag = Buffer.from(tagStr, "base64url");
