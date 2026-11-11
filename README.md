@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/banner.svg" alt="Smart Campus Companion" width="100%">
+<img src="docs/logo.png" alt="TSSD" width="190">
 
 # Smart Campus Companion
 
@@ -56,7 +56,7 @@ around a single shared contract.
 
 > **Status:** auth, the content API and the React client are working end to end
 > against MongoDB. MFA, Google SSO, file uploads, search, bookmarks, admin and
-> notifications are designed and scoped — see the [Roadmap](#roadmap).
+> notifications are designed and in progress.
 
 ---
 
@@ -199,26 +199,6 @@ Security is a first-class requirement, targeting **OWASP ASVS Level 2**:
 
 ---
 
-## Roadmap
-
-**Working today**
-
-- [x] Merged monorepo, CI, shared contract
-- [x] Database models + query helpers (`@scc/db`)
-- [x] Session auth (register · login · logout · me) with CSRF + Argon2id
-- [x] Content CRUD for announcements, events, resources, openings — with RBAC and visibility
-- [x] React client wired to the real API
-
-**Planned**
-
-- [ ] Profile, search, bookmarks and admin routes
-- [ ] Resource uploads (presigned storage + virus scan) and event RSVP
-- [ ] MFA, Google SSO, email verification, account lockout
-- [ ] Background worker (scheduling, expiry, notifications)
-- [ ] Deployment (same-origin hosting, HTTPS) and load testing
-
----
-
 ## Team
 
 A Software Engineering project at **IEM Kolkata**.
@@ -235,5 +215,3 @@ A Software Engineering project at **IEM Kolkata**.
 ## License
 
 [MIT](LICENSE) © Debangan Mali
-
-**Contact:** debanganmali.ai@yahoo.com

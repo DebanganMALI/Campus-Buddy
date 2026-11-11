@@ -54,6 +54,31 @@ export async function revokeSession(sid: string, reason: string): Promise<void> 
   await Session.updateOne({ _id: sid, revokedAt: null }, { $set: { revokedAt: new Date(), revokeReason: reason } });
 }
 
+// Revoke every active session for a user ("log out everywhere"). Returns how
+// many were revoked.
+export async function revokeAllSessions(userId: Types.ObjectId | string, reason: string): Promise<number> {
+  const r = await Session.updateMany(
+    { userId, revokedAt: null },
+    { $set: { revokedAt: new Date(), revokeReason: reason } },
+  );
+  return r.modifiedCount;
+}
+
+// Issue a fresh secret for an existing session: writes the new refresh cookie
+// (same sid, so CSRF binding is preserved) and returns the fields to persist.
+// The old hash is kept as prevRefreshHash so an in-flight request carrying it
+// still authenticates during the grace window.
+export function rotateSecret(
+  res: Response,
+  session: { _id: string; refreshHash: string; absoluteExpiresAt: Date },
+): { refreshHash: string; prevRefreshHash: string; rotatedAt: Date } {
+  const secret = randomToken(32);
+  const now = new Date();
+  const maxAge = Math.max(0, session.absoluteExpiresAt.getTime() - now.getTime());
+  res.cookie(COOKIES.refresh, `${session._id}.${secret}`, { ...cookieBase, maxAge });
+  return { refreshHash: sha256(secret), prevRefreshHash: session.refreshHash, rotatedAt: now };
+}
+
 export const clearSessionCookie = (res: Response): void => {
   res.clearCookie(COOKIES.refresh, cookieBase);
 };

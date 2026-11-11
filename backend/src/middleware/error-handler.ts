@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
+import { isTest } from "../config/env.js";
 import { AppError } from "../lib/errors.js";
 
 interface ZodLike {
@@ -31,7 +32,12 @@ export const notFound: RequestHandler = () => {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Express needs 4 args to detect an error handler
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   const e = toAppError(err);
-  if (e.status >= 500) req.log?.error({ err }, "request failed");
+  if (e.status >= 500) {
+    req.log?.error({ err }, "request failed");
+    // Test-only: logs are silent under test, so surface the real cause in the
+    // vitest output. Never runs in dev/prod. Remove once the suite is green.
+    if (isTest) console.error("[5xx]", `${req.method} ${req.originalUrl}`, err);
+  }
   if (e.extra.retryAfter) res.setHeader("Retry-After", String(e.extra.retryAfter));
   res.status(e.status).json({
     code: e.code,

@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "gen:secrets": "tsx src/scripts/gen-secrets.ts"
+    "gen:secrets": "tsx src/scripts/gen-secrets.ts",
+    "db:seed": "tsx --env-file=.env src/scripts/seed.ts",
+    "db:seed:prod": "tsx --env-file=.env.production src/scripts/seed.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

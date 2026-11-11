@@ -24,6 +24,15 @@ export const TTL = {
   inviteSec: 3 * DAY,
 } as const;
 
+// Session-secret rotation. The secret carried by the refresh cookie is rotated
+// at most once per `rotateAfterSec`. After a rotation the previous secret stays
+// valid for `graceSec` to cover a request already in flight when the new cookie
+// was set; presented later it is treated as a cloned-cookie replay.
+export const SESSION_ROTATION = {
+  rotateAfterSec: 15 * 60,
+  graceSec: 120,
+} as const;
+
 export const sessionLifetime = (role: Role) =>
   isPrivileged(role)
     ? { idleSec: 2 * HOUR, absoluteSec: 8 * HOUR }

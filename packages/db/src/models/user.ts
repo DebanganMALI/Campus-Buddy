@@ -4,7 +4,7 @@ import { ROLES, DEPARTMENTS, YEARS } from "@scc/shared";
 import { basePlugin } from "../plugins/base.js";
 
 const userSchema = new Schema({
-  email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 254 },
+  email: { type: String, required: true, lowercase: true, trim: true, maxlength: 254 },
   emailVerified: { type: Boolean, default: false },
   name: { type: String, required: true, minlength: 2, maxlength: 80 },
   rollNo: { type: String, uppercase: true, maxlength: 30 },

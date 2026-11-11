@@ -9,6 +9,7 @@ const lines = [
   `CSRF_SECRET=${hex(32)}`,
   `PASSWORD_PEPPER=${hex(32)}`,
   `MFA_ENCRYPTION_KEY=${b64(32)}`,
+  `FIELD_ENCRYPTION_KEY=${b64(32)}`,
   `JWT_KEY_ID=dev-${hex(4)}`,
   // Placeholder: JWT signing is not used by the Option A session auth, but the
   // config still requires the field to be present.

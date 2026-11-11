@@ -6,10 +6,17 @@ const ALGORITHM = "aes-256-gcm";
 function getKey(): Buffer {
   const key = process.env.FIELD_ENCRYPTION_KEY;
   if (!key) {
-    // Development fallback if no environment variable is set
-    return Buffer.alloc(32, "dev-secret-key-do-not-use-in-prd"); 
+    // Never fall back in production: this key is visible in the repo, so data
+    // "encrypted" with it would be readable by anyone with the source.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FIELD_ENCRYPTION_KEY is required in production");
+    }
+    // Development/test fallback only
+    return Buffer.alloc(32, "dev-secret-key-do-not-use-in-prd");
   }
-  return Buffer.from(key, "base64");
+  const buf = Buffer.from(key, "base64");
+  if (buf.length !== 32) throw new Error("FIELD_ENCRYPTION_KEY must be 32 bytes, base64-encoded");
+  return buf;
 }
 
 export function encryptField(text: string): string {

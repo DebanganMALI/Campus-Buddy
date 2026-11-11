@@ -19,7 +19,8 @@
     "infra:down": "docker compose -f backend/docker-compose.yml down",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "db:seed": "npm run db:seed -w @scc/backend"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
