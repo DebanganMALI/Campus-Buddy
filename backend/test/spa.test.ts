@@ -39,6 +39,20 @@ describe("same-origin SPA serving", () => {
     expect(res.text).toContain("APP_SHELL");
   });
 
+  it("gives the app a CSP that lets it run, and keeps the API's deny-all CSP", async () => {
+    // Regression: the API's default-src 'none' on the HTML page blanked the app.
+    for (const p of ["/", "/app.js", "/dashboard"]) {
+      const csp = (await request(app).get(p)).headers["content-security-policy"] as string;
+      expect(csp).toContain("script-src 'self'");
+      expect(csp).toContain("style-src 'self'");
+      expect(csp).not.toContain("default-src 'none'");
+      expect(csp).not.toContain("unsafe-inline");
+      expect(csp).not.toContain("upgrade-insecure-requests"); // off outside production (http)
+    }
+    const apiCsp = (await request(app).get("/api/health")).headers["content-security-policy"] as string;
+    expect(apiCsp).toContain("default-src 'none'");
+  });
+
   it("still routes /api/* to the API, not the SPA", async () => {
     expect((await request(app).get("/api/health")).body.status).toBe("ok");
     // An auth-guarded API route must 401 (JSON), not return the app shell.

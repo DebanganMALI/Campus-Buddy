@@ -5,8 +5,15 @@ import { AppError } from "../lib/errors.js";
 
 export const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-// The API only serves JSON, so the CSP denies everything
-export const securityHeaders = helmet({
+const commonHeaders = {
+  crossOriginResourcePolicy: { policy: "same-origin" as const },
+  referrerPolicy: { policy: "no-referrer" as const },
+  strictTransportSecurity: isProd ? { maxAge: 31_536_000, includeSubDomains: true, preload: true } : (false as const),
+};
+
+// API responses are JSON only, so their CSP denies everything.
+const apiHeaders = helmet({
+  ...commonHeaders,
   contentSecurityPolicy: {
     useDefaults: false,
     directives: {
@@ -16,10 +23,35 @@ export const securityHeaders = helmet({
       formAction: ["'none'"],
     },
   },
-  crossOriginResourcePolicy: { policy: "same-origin" },
-  referrerPolicy: { policy: "no-referrer" },
-  strictTransportSecurity: isProd ? { maxAge: 31_536_000, includeSubDomains: true, preload: true } : false,
 });
+
+// The web app (served same-origin when CLIENT_DIR is set) gets a strict document
+// CSP: only its own scripts, styles, fonts and API — no inline script, no eval,
+// no third-party origins. data: covers the small inline SVG backgrounds in CSS.
+const appHeaders = helmet({
+  ...commonHeaders,
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'", "data:"],
+      fontSrc: ["'self'"],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'self'"],
+      // https only: on http://localhost it would rewrite asset URLs and break the page.
+      ...(isProd ? { upgradeInsecureRequests: [] } : {}),
+    },
+  },
+});
+
+const servesApp = Boolean(env.CLIENT_DIR);
+export const securityHeaders: RequestHandler = (req, res, next) =>
+  servesApp && !req.path.startsWith("/api/") ? appHeaders(req, res, next) : apiHeaders(req, res, next);
 
 // Browsers always send Origin on unsafe requests; a foreign one is a CSRF attempt
 export const originGuard: RequestHandler = (req, _res, next) => {
