@@ -1,0 +1,16 @@
+# gitleaks configuration (picked up automatically by the security workflow).
+# Default rules, plus a deliberately narrow allowlist for values that can never
+# be real secrets. Never allowlist a whole folder or a real-looking key here.
+title = "Campus Buddy gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known fakes only: the integration-test env file, and empty KEY= placeholders"
+# Fixed fake values used only by the test suite (never deployed).
+paths = ['''(^|/)backend/test/setup-env\.ts$''']
+# An empty assignment (KEY= at end of line) holds no secret; the generic rule's
+# match otherwise spills onto the next line of an env example or doc.
+regexTarget = "match"
+regexes = ['''=\r?\n''']
