@@ -1,0 +1,18 @@
+# Keep the build context small and secret-free.
+**/node_modules
+**/dist
+**/coverage
+**/*.log
+.git
+.github
+.vscode
+docs
+*.md
+
+# Never send env files (real secrets) into an image.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Tests are not part of the production build.
+backend/test

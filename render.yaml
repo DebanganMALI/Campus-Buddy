@@ -1,0 +1,45 @@
+# Render Blueprint: one free web service that serves the API and the web app
+# from a single origin. MongoDB (Atlas) and Redis (Upstash) are external free
+# services. Every secret and connection string is `sync: false`: you enter it in
+# the Render dashboard, it is never committed. Step-by-step: docs/DEPLOY.md
+services:
+  - type: web
+    name: campus-buddy
+    runtime: docker
+    plan: free
+    region: singapore # closest Render region to India; put Atlas + Upstash there too
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Proxy hops in front of the app. Verify on the live site (DEPLOY.md, step 8).
+      - key: TRUST_PROXY
+        value: "3"
+      - key: LOG_LEVEL
+        value: info
+      - key: ALLOWED_EMAIL_DOMAINS
+        value: iem.edu.in
+      # Your public URL, e.g. https://campus-buddy.onrender.com
+      - key: APP_ORIGIN
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      # From: npm run gen:secrets -w @scc/backend (same values go in .env.production)
+      - key: CSRF_SECRET
+        sync: false
+      - key: PASSWORD_PEPPER
+        sync: false
+      - key: MFA_ENCRYPTION_KEY
+        sync: false
+      - key: FIELD_ENCRYPTION_KEY
+        sync: false
+      - key: JWT_PRIVATE_KEY
+        sync: false
+      - key: JWT_KEY_ID
+        sync: false

@@ -25,6 +25,8 @@ const schema = z
     CSRF_SECRET: z.string().min(32),
     PASSWORD_PEPPER: z.string().min(32),
     MFA_ENCRYPTION_KEY: base64Bytes(32),
+    // AES-256-GCM key for encrypted profile fields (phone). Read by @scc/db.
+    FIELD_ENCRYPTION_KEY: base64Bytes(32).optional(),
     ALLOWED_EMAIL_DOMAINS: csv.default([]),
     HIBP_ENABLED: z.stringbool().default(true),
     TURNSTILE_SECRET_KEY: z.string().optional(),
@@ -41,7 +43,9 @@ const schema = z
     need(e.APP_ORIGIN.startsWith("https://"), "APP_ORIGIN", "must be https in production");
     need(e.TRUST_PROXY >= 1, "TRUST_PROXY", "set the proxy hop count in production");
     need(e.ALLOWED_EMAIL_DOMAINS.length > 0, "ALLOWED_EMAIL_DOMAINS", "required in production");
-    need(Boolean(e.SMTP_URL), "SMTP_URL", "required in production");
+    // Without it, encrypted fields would fall back to a key visible in the repo.
+    need(Boolean(e.FIELD_ENCRYPTION_KEY), "FIELD_ENCRYPTION_KEY", "required in production");
+    // SMTP_URL is optional: without it, email is disabled (logged, never sent).
   });
 
 // Treat empty strings from .env files as unset

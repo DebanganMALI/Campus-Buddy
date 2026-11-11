@@ -30,7 +30,16 @@ export function createApp(): Express {
 
   // Order matters: request id first so every later log line carries it.
   app.use(requestId);
-  app.use(pinoHttp({ logger, genReqId: (req) => (req as { id?: string }).id ?? "unknown" }));
+  // At debug level only, record the client IP Express resolved after TRUST_PROXY,
+  // so the proxy hop count can be verified on a new host. Off at info level.
+  const logClientIp = env.LOG_LEVEL === "debug" || env.LOG_LEVEL === "trace";
+  app.use(
+    pinoHttp({
+      logger,
+      genReqId: (req) => (req as { id?: string }).id ?? "unknown",
+      ...(logClientIp ? { customProps: (req) => ({ clientIp: (req as { ip?: string }).ip }) } : {}),
+    }),
+  );
   app.use(securityHeaders);
 
   // Same-origin SPA: serve static assets before the API middleware so they are
