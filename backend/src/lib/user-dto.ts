@@ -1,4 +1,4 @@
-import type { UserDTO } from "@scc/shared";
+import type { ProfileDTO, UserDTO } from "@scc/shared";
 import type { UserRecord } from "./records.js";
 
 // Maps the stored user document to the public DTO the frontend expects.
@@ -19,5 +19,14 @@ export function toUserDto(u: UserRecord): UserDTO {
   if (u.rollNo) dto.rollNo = u.rollNo;
   if (typeof u.year === "number") dto.year = u.year;
   if (u.section) dto.section = u.section;
+  return dto;
+}
+
+// The viewer's own profile: the public DTO plus the private, editable fields.
+// `phone` arrives already decrypted from the caller (it is stored encrypted).
+export function toProfileDto(u: UserRecord, extra: { phone?: string; bio?: string }): ProfileDTO {
+  const dto: ProfileDTO = toUserDto(u);
+  if (extra.phone) dto.phone = extra.phone;
+  if (extra.bio) dto.bio = extra.bio;
   return dto;
 }

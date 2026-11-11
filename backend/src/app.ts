@@ -13,6 +13,10 @@ import { announcementsRouter } from "./routes/announcements.js";
 import { eventsRouter } from "./routes/events.js";
 import { resourcesRouter } from "./routes/resources.js";
 import { openingsRouter } from "./routes/openings.js";
+import { profileRouter } from "./routes/profile.js";
+import { searchRouter } from "./routes/search.js";
+import { bookmarksRouter } from "./routes/bookmarks.js";
+import { adminRouter } from "./routes/admin.js";
 
 // Builds the Express app. Kept separate from server.ts so tests can import the
 // app without opening a port.
@@ -41,6 +45,10 @@ export function createApp(): Express {
   app.use("/api/events", eventsRouter);
   app.use("/api/resources", resourcesRouter);
   app.use("/api/openings", openingsRouter);
+  app.use("/api/profile", profileRouter);
+  app.use("/api/search", searchRouter);
+  app.use("/api/bookmarks", bookmarksRouter);
+  app.use("/api/admin", adminRouter);
 
   app.use(notFound);
   app.use(errorHandler);
