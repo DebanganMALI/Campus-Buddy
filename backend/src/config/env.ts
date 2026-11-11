@@ -30,6 +30,9 @@ const schema = z
     TURNSTILE_SECRET_KEY: z.string().optional(),
     SMTP_URL: z.string().optional(),
     MAIL_FROM: z.string().default("Campus Buddy <no-reply@campus-buddy.local>"),
+    // Absolute path to the built SPA (frontend/dist). When set, the API also
+    // serves the web app from the same origin — the single-service deployment.
+    CLIENT_DIR: z.string().optional(),
   })
   .superRefine((e, ctx) => {
     if (e.NODE_ENV !== "production") return;

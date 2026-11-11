@@ -1,3 +1,4 @@
+import path from "node:path";
 import express, { type Express } from "express";
 import cookieParser from "cookie-parser";
 import { pinoHttp } from "pino-http";
@@ -25,10 +26,17 @@ export function createApp(): Express {
   app.disable("x-powered-by");
   app.set("trust proxy", env.TRUST_PROXY);
 
+  const clientDir = env.CLIENT_DIR;
+
   // Order matters: request id first so every later log line carries it.
   app.use(requestId);
   app.use(pinoHttp({ logger, genReqId: (req) => (req as { id?: string }).id ?? "unknown" }));
   app.use(securityHeaders);
+
+  // Same-origin SPA: serve static assets before the API middleware so they are
+  // not rate-limited, origin-guarded or CSRF-checked. Missing files fall through
+  // to the API; unmatched client routes get index.html below.
+  if (clientDir) app.use(express.static(clientDir, { index: false, maxAge: "1h" }));
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
   app.use(rateLimit("global")); // coarse per-IP ceiling across the whole API
@@ -49,6 +57,15 @@ export function createApp(): Express {
   app.use("/api/search", searchRouter);
   app.use("/api/bookmarks", bookmarksRouter);
   app.use("/api/admin", adminRouter);
+
+  // SPA fallback: any non-API GET returns index.html so client-side routing
+  // works on refresh/deep links. /api/* still falls through to notFound (JSON).
+  if (clientDir) {
+    app.get(/(.*)/, (req, res, next) => {
+      if (req.path.startsWith("/api/")) return next();
+      res.sendFile(path.join(clientDir, "index.html"));
+    });
+  }
 
   app.use(notFound);
   app.use(errorHandler);
