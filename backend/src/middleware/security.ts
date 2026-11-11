@@ -53,13 +53,23 @@ const servesApp = Boolean(env.CLIENT_DIR);
 export const securityHeaders: RequestHandler = (req, res, next) =>
   servesApp && !req.path.startsWith("/api/") ? appHeaders(req, res, next) : apiHeaders(req, res, next);
 
+// Trusted origins: APP_ORIGIN, plus the URL Render assigns the service (it sets
+// RENDER_EXTERNAL_URL itself), so a renamed service URL never blocks logins.
+const trustedOrigins = new Set(
+  [env.APP_ORIGIN, process.env.RENDER_EXTERNAL_URL]
+    .filter((o): o is string => Boolean(o))
+    .map((o) => o.replace(/\/+$/, "")),
+);
+
 // Browsers always send Origin on unsafe requests; a foreign one is a CSRF attempt
 export const originGuard: RequestHandler = (req, _res, next) => {
   if (!UNSAFE_METHODS.has(req.method)) return next();
   const origin = req.get("origin");
   const referer = req.get("referer");
-  if (origin && origin !== env.APP_ORIGIN) throw new AppError("CSRF_INVALID");
-  if (!origin && referer && !referer.startsWith(`${env.APP_ORIGIN}/`)) throw new AppError("CSRF_INVALID");
+  if (origin && !trustedOrigins.has(origin)) throw new AppError("CSRF_INVALID");
+  if (!origin && referer && ![...trustedOrigins].some((o) => referer.startsWith(`${o}/`))) {
+    throw new AppError("CSRF_INVALID");
+  }
   next();
 };
 
