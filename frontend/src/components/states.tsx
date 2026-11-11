@@ -1,13 +1,12 @@
 // Full-page states used by the route guards. Behaviour unchanged from part 1; new look.
 import { Link } from "react-router";
 import { Icon } from "./Icon";
+import { BrandMark } from "./BrandMark";
 
 export function FullScreenLoading() {
   return (
     <div className="boot" role="status" aria-live="polite">
-      <span className="brand-mark" aria-hidden>
-        C
-      </span>
+      <BrandMark />
       <span className="sr-only">Loading Campus Companion…</span>
     </div>
   );

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useAuth } from "../auth/auth-context";
 import { Icon, type IconName } from "../components/Icon";
+import { BrandMark } from "../components/BrandMark";
 import { initials, ROLE_LABEL } from "../lib/format";
 
 const NAV: Array<{ to: string; label: string; short: string; icon: IconName }> = [
@@ -33,9 +34,7 @@ export function AppShell() {
       <header className="app-header">
         <div className="app-header-inner">
           <Link to="/dashboard" className="brand" aria-label="Campus Companion home">
-            <span className="brand-mark" aria-hidden>
-              C
-            </span>
+            <BrandMark />
             <span className="brand-name">
               Campus Companion<span>IEM</span>
             </span>

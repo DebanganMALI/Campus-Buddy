@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Aurora } from "../components/PageBand";
 import { Icon } from "../components/Icon";
+import { BrandMark } from "../components/BrandMark";
+import logoFull from "../assets/brand/logo-full.png";
 
 /**
  * Split screen: a preview of the product floating over the night panel, the form on paper.
@@ -12,9 +14,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       <section className="auth-art" aria-label="About Campus Companion">
         <Aurora />
         <div className="brand">
-          <span className="brand-mark" aria-hidden>
-            C
-          </span>
+          <BrandMark />
           <span className="brand-name">Campus Companion</span>
         </div>
         <div className="stack">
@@ -54,6 +54,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <p className="small">A SEPM project at IEM Kolkata</p>
       </section>
       <main className="auth-form-side" id="main">
+        <div className="auth-brand">
+          <img src={logoFull} alt="TSSD" width={84} height={96} />
+        </div>
         {children}
       </main>
     </div>
